@@ -1,11 +1,11 @@
 cmake_minimum_required(VERSION 3.20)
-project(vulkanLearning-1)
+project(vulkanFrameWork)
 
 set(CMAKE_CXX_STANDARD 17)
 
 aux_source_directory(. DIRSRCS)
 
-set(VULKAN_SDK_PATH ../thirdParty/vulkan)
+set(VULKAN_SDK_PATH ../ThirdParty/vulkan)
 
 include_directories(
 SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/../thirdParty/GLM/

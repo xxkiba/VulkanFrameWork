@@ -9,6 +9,8 @@ namespace FF {
 		mRotation = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
 		mScale = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
 		mCamera = Camera();
+		mUniformManager = UniformManager::create();
+		mMaterial = Material::create();
 	}
 	SceneNode::~SceneNode() {
 	}

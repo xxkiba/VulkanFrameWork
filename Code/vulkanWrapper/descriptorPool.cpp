@@ -35,12 +35,17 @@ namespace FF::Wrapper {
 		VkDescriptorPoolSize uniformDescriptorSize{};
 		uniformDescriptorSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		uniformDescriptorSize.descriptorCount = uniformBufferCount * frameCount;
-		poolSizes.push_back(uniformDescriptorSize);
+		if (uniformDescriptorSize.descriptorCount != 0) {
+			poolSizes.push_back(uniformDescriptorSize);
+		}
+
 
 		VkDescriptorPoolSize textureDescriptorSize{};
 		textureDescriptorSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		textureDescriptorSize.descriptorCount = textureCount * frameCount; // how much descriptor we need, should be the same as the number of images in the swapchain
-		poolSizes.push_back(textureDescriptorSize);
+		if (textureDescriptorSize.descriptorCount != 0) {
+			poolSizes.push_back(textureDescriptorSize);
+		}
 
 		mPoolSizes = poolSizes;
 

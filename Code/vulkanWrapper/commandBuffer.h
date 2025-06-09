@@ -40,6 +40,7 @@ namespace FF::Wrapper {
 		void bindVertexBuffer(const std::vector<VkBuffer>& buffers, uint32_t binding = 0, std::vector<VkDeviceSize> offsets = { 0 });
 		void bindIndexBuffer(VkBuffer buffer, uint32_t offset = 0, VkIndexType indexType = VK_INDEX_TYPE_UINT32);
 		void bindDescriptorSet(const VkPipelineLayout layout, const VkDescriptorSet& descriptorSet);
+		void bindDescriptorSets(const VkPipelineLayout layout, uint32_t firstSet, uint32_t descriptorSetCount, const VkDescriptorSet* pDescriptorSets);
 		void pushConstants(const VkPipelineLayout layout, VkShaderStageFlagBits flags, uint32_t offset, uint32_t size, void* pData);
 		void draw(uint32_t vertexCount);
 

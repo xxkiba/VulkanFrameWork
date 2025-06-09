@@ -3,8 +3,11 @@
 void Camera::lookAt(glm::vec3 _pos, glm::vec3 _front, glm::vec3 _up)
 {
 	m_position = _pos;
-	m_front = glm::normalize(_front);
-	m_up = _up;
+	m_front = glm::normalize(_front - _pos);
+
+	
+	glm::vec3 right = glm::normalize(glm::cross(m_front, _up));
+	m_up = glm::normalize(glm::cross(right, m_front));
 
 	m_vMatrix = glm::lookAt(m_position, m_position + m_front, m_up);
 }

@@ -54,7 +54,7 @@ namespace FF {
 		void cleanUp();
 
 	private:
-		void createPipeline();
+		Wrapper::Pipeline::Ptr createPipeline(const std::string& vertexShaderFile, const std::string& fragShaderFile);
 		void createRenderPass();
 		void createCommandBuffers();
 		void createSyncObjects();
@@ -66,8 +66,8 @@ namespace FF {
 		void recreateSwapChain();
 
 	private:
-		int mWidth{ 800 };
-		int mHeight{ 600 };
+		int mWidth{ 1280 };
+		int mHeight{ 720 };
 
 
 	private:
@@ -77,7 +77,10 @@ namespace FF {
 		Wrapper::Window::Ptr mWindow{ nullptr };
 		Wrapper::WindowSurface::Ptr mSurface{ nullptr };
 		Wrapper::SwapChain::Ptr mSwapChain{ nullptr };
+
 		Wrapper::Pipeline::Ptr mPipeline{ nullptr };
+		Wrapper::Pipeline::Ptr mBattleFirePipeline{ nullptr };
+
 		Wrapper::RenderPass::Ptr mRenderPass{ nullptr };
 		Wrapper::CommandPool::Ptr mCommandPool{ nullptr };
 		
@@ -94,8 +97,10 @@ namespace FF {
 		//Texture::Ptr mTexture{ nullptr }; 
 
 		Model::Ptr mModel{ nullptr };
-		VPMatrices mVPMatrices{};
+		NVPMatrices mNVPMatrices{};
 		SceneNode::Ptr mSphereNode{ nullptr };
+
+		bool useBattleFirePipeline{ false };
 		//Camera mCamera{};
 	};
 }

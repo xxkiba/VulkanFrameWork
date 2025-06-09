@@ -9,7 +9,7 @@ namespace FF {
 
 		constantParam vpMatricesParam;
 		vpMatricesParam.offset = 0;
-		vpMatricesParam.size = sizeof(VPMatrices);
+		vpMatricesParam.size = sizeof(NVPMatrices);
 		vpMatricesParam.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 		mConstantParams=vpMatricesParam;
 		mPushConstantRange= Wrapper::ConstantRange::create(vpMatricesParam.offset, vpMatricesParam.size, vpMatricesParam.stageFlags);

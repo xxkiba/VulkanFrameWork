@@ -2,6 +2,8 @@
 #include "base.h"
 #include "model.h"
 #include "Camera.h"
+#include "uniformManager.h"
+#include "Material.h"
 #include "vulkanWrapper/commandBuffer.h"
 
 
@@ -25,7 +27,11 @@ namespace FF {
 		void SetScale(float x, float y, float z);
 		void draw(const Wrapper::CommandBuffer::Ptr& cmdBuf);
 		void Update();// Optional: js, C#, python,etc.  have this function
+
+
 		std::vector<Model::Ptr> mModels{};
+		Material::Ptr mMaterial{ nullptr };
 		Camera mCamera{};
+		UniformManager::Ptr mUniformManager{ nullptr };
 	};
 }

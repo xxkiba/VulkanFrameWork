@@ -51,8 +51,12 @@ namespace FF::Wrapper {
 		vkCmdBindDescriptorSets(mCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 0, 1, &descriptorSet, 0, nullptr);
 	}
 
+	void CommandBuffer::bindDescriptorSets(const VkPipelineLayout layout, uint32_t firstSet, uint32_t descriptorSetCount, const VkDescriptorSet* pDescriptorSets) {
+		vkCmdBindDescriptorSets(mCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, firstSet, descriptorSetCount, pDescriptorSets, 0, nullptr);
+	}
+
 	void CommandBuffer::pushConstants(const VkPipelineLayout layout,VkShaderStageFlagBits flags,uint32_t offset,uint32_t size, void* pData) {
-		vkCmdPushConstants(mCommandBuffer,layout,flags,0,sizeof(VPMatrices),pData);
+		vkCmdPushConstants(mCommandBuffer,layout,flags,0,sizeof(NVPMatrices),pData);
 	}
 
 	void CommandBuffer::draw(uint32_t vertexCount) {

@@ -26,10 +26,10 @@ namespace FF {
 
 		mSphereNode = SceneNode::create();
 
-		mSphereNode->mCamera.lookAt(glm::vec3(0.0f, 0.0f, 20.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		mSphereNode->mCamera.lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 		//mSphereNode->mCamera.update();
 
-		mSphereNode->mCamera.setPerpective(45.0f, static_cast<float>(mWidth) / static_cast<float>(mHeight), 0.1f, 100.0f);
+		mSphereNode->mCamera.setPerpective(60.0f, static_cast<float>(mWidth) / static_cast<float>(mHeight), 0.1f, 100.0f);
 
 		mSphereNode->mCamera.setSpeed(0.001f);
 	}
@@ -51,27 +51,32 @@ namespace FF {
 
 		mSwapChain->createFrameBuffers(mRenderPass);
 
+		
+		mSphereNode->mUniformManager = UniformManager::create();
+		mSphereNode->mUniformManager->init(mDevice,mCommandPool, mSwapChain->getImageCount());
 
-		mUniformManager = UniformManager::create();
-		mUniformManager->init(mDevice,mCommandPool, mSwapChain->getImageCount());
+		mSphereNode->mMaterial = Material::create();
+		mSphereNode->mMaterial->init(mDevice, mCommandPool, "assets/book.jpg",mSwapChain->getImageCount());
 
 		mPushConstantManager = PushConstantManager::create();
 		mPushConstantManager->init();
 
 		// Create a model
-		mModel = Model::create(mDevice);
-		mModel->loadModel("assets/book.obj", mDevice);
-		//mModel->loadBattleFireModel("assets/Sphere.rhsm", mDevice);
-		mSphereNode->mModels.push_back(mModel);
-
-		
-
-
-		
-		mPipeline = Wrapper::Pipeline::create(mDevice,mRenderPass);
-		createPipeline();
-
-		
+		Model::Ptr commonModel = Model::create(mDevice);
+		if (useBattleFirePipeline) {
+			commonModel->loadBattleFireModel("assets/Sphere.rhsm", mDevice);
+			mSphereNode->mModels.push_back(commonModel);
+			mBattleFirePipeline = Wrapper::Pipeline::create(mDevice, mRenderPass);
+			mSphereNode->mModels[0]->setModelMatrix(glm::mat4(1.0f));
+			mPipeline = createPipeline("shaders/testVs.spv", "shaders/testFs.spv");
+		}
+		else {
+			commonModel->loadModel("assets/book.obj", mDevice);
+			mSphereNode->mModels.push_back(commonModel);
+			mPipeline = Wrapper::Pipeline::create(mDevice, mRenderPass);
+			mSphereNode->mModels[0]->setModelMatrix(glm::mat4(1.0f));
+			mPipeline = createPipeline("shaders/vs.spv","shaders/fs.spv");
+		}
 
 
 		createCommandBuffers();
@@ -85,10 +90,11 @@ namespace FF {
 	}
 
 	// Create a pipeline
-	void Application::createPipeline() {
+	Wrapper::Pipeline::Ptr  Application::createPipeline(const std::string& vertexShaderFile,const std::string& fragShaderFile) {
 		// Create a pipeline using the shader
 		// mPipeline = Wrapper::Pipeline::create(mDevice, mSwapChain, mShader);
 
+		Wrapper::Pipeline::Ptr mPipeline = Wrapper::Pipeline::create(mDevice, mRenderPass);
 
 		// Set up viewport and scissor
 		VkViewport viewport{};
@@ -108,10 +114,10 @@ namespace FF {
 		mPipeline->setScissors({ scissor });
 
 		std::vector<Wrapper::Shader::Ptr> shaderGroup;
-		auto vertexShader = Wrapper::Shader::create(mDevice, "shaders/vs.spv", VK_SHADER_STAGE_VERTEX_BIT, "main");
+		auto vertexShader = Wrapper::Shader::create(mDevice, vertexShaderFile, VK_SHADER_STAGE_VERTEX_BIT, "main");
 		//auto vertexShader = Wrapper::Shader::create(mDevice, "shaders/testVs.spv", VK_SHADER_STAGE_VERTEX_BIT, "main");
 		shaderGroup.push_back(vertexShader);
-		auto fragmentShader = Wrapper::Shader::create(mDevice, "shaders/fs.spv", VK_SHADER_STAGE_FRAGMENT_BIT, "main"); 
+		auto fragmentShader = Wrapper::Shader::create(mDevice, fragShaderFile, VK_SHADER_STAGE_FRAGMENT_BIT, "main");
 		//auto fragmentShader = Wrapper::Shader::create(mDevice, "shaders/testFs.spv", VK_SHADER_STAGE_FRAGMENT_BIT, "main");
 		shaderGroup.push_back(fragmentShader);
 
@@ -131,8 +137,8 @@ namespace FF {
 		mPipeline->mDynamicState.pDynamicStates = nullptr; // No dynamic state for now
 
 		// Layout of vertex data
-		auto bindingDescriptions = mModel->getVertexInputBindingDescriptions();
-		auto attributeDescriptions = mModel->getAttributeDescriptions();
+		auto bindingDescriptions = mSphereNode->mModels[0]->getVertexInputBindingDescriptions();
+		auto attributeDescriptions = mSphereNode->mModels[0]->getAttributeDescriptions();
 
 		// Vertex input state
 		mPipeline->mVertexInputState.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -214,9 +220,13 @@ namespace FF {
 
 		// Uniform transfer
 		mPipeline->mPipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-		mPipeline->mPipelineLayoutInfo.setLayoutCount = 1;
-		auto layout = mUniformManager->getDescriptorLayout()->getLayout();
-		mPipeline->mPipelineLayoutInfo.pSetLayouts = &layout;
+		
+		auto layout0 = mSphereNode->mUniformManager->getDescriptorLayout()->getLayout();
+		auto layout1 = mSphereNode->mMaterial->getDescriptorLayout()->getLayout();
+
+		std::vector<VkDescriptorSetLayout> layouts = { layout0, layout1 };
+		mPipeline->mPipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(layouts.size());
+		mPipeline->mPipelineLayoutInfo.pSetLayouts = layouts.data();
 		auto pushConstantRange = mPushConstantManager->getPushConstantRanges()->getPushConstantRange();
 		// Transform the push constant ranges to VkPushConstantRange
 		mPipeline->mPipelineLayoutInfo.pushConstantRangeCount = 1;
@@ -224,7 +234,10 @@ namespace FF {
 
 		mPipeline->build();
 
+		return mPipeline;
 	}
+
+
 
 	void Application::cleanUpSwapChain() {
 		// Release GPU resources
@@ -236,6 +249,7 @@ namespace FF {
 		mCommandBuffers.clear();
 
 		mPipeline.reset();
+		mBattleFirePipeline.reset();
 		mRenderPass.reset();
 		mSwapChain.reset();
 
@@ -268,9 +282,6 @@ namespace FF {
 		createRenderPass();
 
 		mSwapChain->createFrameBuffers(mRenderPass);
-
-		mPipeline = Wrapper::Pipeline::create(mDevice, mRenderPass);
-		createPipeline();
 
 
 		createCommandBuffers();
@@ -366,10 +377,11 @@ namespace FF {
 
 			//mModel->update();
 
-			mVPMatrices.mViewMatrix = mSphereNode->mCamera.getViewMatrix();
-			mVPMatrices.mProjectionMatrix = mSphereNode->mCamera.getProjectMatrix();
+			mNVPMatrices.mViewMatrix = mSphereNode->mCamera.getViewMatrix();
+			mNVPMatrices.mProjectionMatrix = mSphereNode->mCamera.getProjectMatrix();
+			mNVPMatrices.mNormalMatrix = glm::transpose(glm::inverse(mNVPMatrices.mViewMatrix));
 
-			mUniformManager->updateUniformBuffer(mVPMatrices, mModel->getUniform(), mCurrentFrame);
+			mSphereNode->mUniformManager->updateUniformBuffer(mNVPMatrices, mSphereNode->mModels[0]->getUniform(), mCurrentFrame);
 
 			render();
 		}
@@ -417,12 +429,18 @@ namespace FF {
 			mCommandBuffers[i]->beginCommandBuffer();
 			// Begin render pass
 			mCommandBuffers[i]->beginRenderPass(renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-			mCommandBuffers[i]->bindGraphicPipeline(mPipeline);
 
-			mCommandBuffers[i]->bindDescriptorSet(mPipeline->getPipelineLayout(), mUniformManager->getDescriptorSet(mCurrentFrame));
 
-			mCommandBuffers[i]->pushConstants(mPipeline->getPipelineLayout(), mPushConstantManager->getConstantParam().stageFlags,
-			mPushConstantManager->getConstantParam().offset, mPushConstantManager->getConstantParam().size, &mPushConstantManager->getConstantData());
+				mCommandBuffers[i]->bindGraphicPipeline(mPipeline);
+
+				std::vector<VkDescriptorSet> descriptorSets = { mSphereNode->mUniformManager->getDescriptorSet(mCurrentFrame) , mSphereNode->mMaterial->getDescriptorSet(mCurrentFrame) };
+				mCommandBuffers[i]->bindDescriptorSets(mPipeline->getPipelineLayout(), 0, descriptorSets.size(), descriptorSets.data());
+
+
+				mCommandBuffers[i]->pushConstants(mPipeline->getPipelineLayout(), mPushConstantManager->getConstantParam().stageFlags,
+				mPushConstantManager->getConstantParam().offset, mPushConstantManager->getConstantParam().size, &mPushConstantManager->getConstantData());
+
+
 
 			//mModel->draw(mCommandBuffers[i]);
 			mSphereNode->draw(mCommandBuffers[i]);

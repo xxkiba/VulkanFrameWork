@@ -26,7 +26,8 @@ const std::vector<const char*> validationLayers = {
 "VK_LAYER_KHRONOS_validation"
 };
 
-struct VPMatrices {
+struct NVPMatrices {
+	glm::mat4 mNormalMatrix{ 1.0f };
 	glm::mat4 mViewMatrix{ 1.0f };
 	glm::mat4 mProjectionMatrix{ 1.0f };
 };
