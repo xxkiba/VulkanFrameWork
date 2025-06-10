@@ -19,7 +19,7 @@ namespace FF {
 
         void init(const Wrapper::Device::Ptr& device,
             const Wrapper::CommandPool::Ptr& commandPool,
-            const std::string& texturePath,
+            std::vector<std::string> texturePaths,
             int frameCount);
 
         [[nodiscard]] auto getDescriptorLayout() const {
@@ -33,7 +33,7 @@ namespace FF {
         }
 
     private:
-        Texture::Ptr mTexture{ nullptr };
+        std::vector<Texture::Ptr> mTextures{ nullptr };
         Wrapper::DescriptorSetLayout::Ptr mDescriptorLayout{ nullptr };
         Wrapper::DescriptorPool::Ptr mDescriptorPool{ nullptr };
         Wrapper::DescriptorSet::Ptr mDescriptorSet{ nullptr };

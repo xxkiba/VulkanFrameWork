@@ -100,7 +100,7 @@ namespace FF {
 		NVPMatrices mNVPMatrices{};
 		SceneNode::Ptr mSphereNode{ nullptr };
 
-		bool useBattleFirePipeline{ false };
+		bool useBattleFirePipeline{ true };
 		//Camera mCamera{};
 	};
 }

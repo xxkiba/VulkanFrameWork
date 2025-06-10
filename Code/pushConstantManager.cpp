@@ -14,8 +14,9 @@ namespace FF {
 		mConstantParams=vpMatricesParam;
 		mPushConstantRange= Wrapper::ConstantRange::create(vpMatricesParam.offset, vpMatricesParam.size, vpMatricesParam.stageFlags);
 
-		mConstantData.constantVmatrix = glm::mat4(1.0f);
-		mConstantData.constantPmatrix = glm::mat4(1.0f);
+		mConstantData.offsets[0] = glm::vec4(-1.0f,0.0f,0.0f,0.0f);
+		mConstantData.offsets[1] = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);
+		mConstantData.offsets[1] = glm::vec4(0.0f, 1.0f, 0.0f, 0.0f);
 	}
 
 	constantData& PushConstantManager::getConstantData() {

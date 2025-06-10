@@ -26,6 +26,7 @@ namespace FF::Wrapper {
 			binding.descriptorType = param->mDescriptorType;
 			binding.descriptorCount = param->mCount;
 			binding.stageFlags = param->mStageFlags;
+			binding.pImmutableSamplers = nullptr; // Only needed for sampler types
 			bindings.push_back(binding);
 		}
 		VkDescriptorSetLayoutCreateInfo layoutInfo{};

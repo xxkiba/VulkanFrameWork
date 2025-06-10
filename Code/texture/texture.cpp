@@ -10,6 +10,7 @@ namespace FF {
 		: mDevice(device),mCommandPool(commandPool), mFilePath(filePath) {
 
 		int texWidth, texHeight, texSize, texChannels;
+		//stbi_set_flip_vertically_on_load(true); // Flip the image vertically to match Vulkan's coordinate system
 		stbi_uc* pixels = stbi_load(filePath.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
 
 		if (!pixels || texWidth == 0 || texHeight == 0) {

@@ -16,6 +16,6 @@ namespace FF::Wrapper {
 		VkShaderStageFlags mStageFlags{ VK_SHADER_STAGE_ALL }; // stage flags, which shader stages will use this descriptor
 
 		std::vector<Buffer::Ptr> mBuffers{};
-		Texture::Ptr mTexture{ nullptr };
+		std::vector<Texture::Ptr> mTextures{ nullptr };
 	};
 }

@@ -6,8 +6,7 @@ layout(location=2)in vec4 normal;
 layout(location=3)in vec4 tangent;
 
 layout(push_constant)uniform PushConstants {
-    mat4 constantVmatrix;
-    mat4 constantPmatrix;
+    vec4 offsets[3];
 }Constants;
 
 layout(set = 0,binding = 0) uniform NVPMatrices {
@@ -19,8 +18,15 @@ layout(set = 0,binding = 1) uniform ModelMatrix {
     mat4 model;
 }objectUBO;
 
-layout(location=0)out vec4 V_Color;
+layout(location=0)out vec4 V_Texcoord;
+layout(location=1)out vec4 V_NormalWS;
+layout(location=2)flat out uint V_instanceID;
 void main(){
-    V_Color=vpUBO.normalMatrix*normal;
-    gl_Position=vpUBO.projection * vpUBO.view * objectUBO.model*position;//ndc
+    uint instanceID = gl_InstanceIndex;
+    V_instanceID = instanceID;
+    V_NormalWS=vpUBO.normalMatrix*normal;
+    V_Texcoord=texcoord;
+    vec4 offset = Constants.offsets[instanceID];
+    vec4 positionMS = vec4(position.xyz + offset.xyz,1.0);
+    gl_Position=vpUBO.projection * vpUBO.view * objectUBO.model*positionMS;//ndc
 }

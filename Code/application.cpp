@@ -56,7 +56,11 @@ namespace FF {
 		mSphereNode->mUniformManager->init(mDevice,mCommandPool, mSwapChain->getImageCount());
 
 		mSphereNode->mMaterial = Material::create();
-		mSphereNode->mMaterial->init(mDevice, mCommandPool, "assets/book.jpg",mSwapChain->getImageCount());
+		std::vector<std::string> textureFiles;
+		textureFiles.push_back("assets/book.jpg");
+		textureFiles.push_back("assets/diffuse.jpg");
+		textureFiles.push_back("assets/metal.jpg");
+		mSphereNode->mMaterial->init(mDevice, mCommandPool, textureFiles,mSwapChain->getImageCount());
 
 		mPushConstantManager = PushConstantManager::create();
 		mPushConstantManager->init();
@@ -431,14 +435,14 @@ namespace FF {
 			mCommandBuffers[i]->beginRenderPass(renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 
-				mCommandBuffers[i]->bindGraphicPipeline(mPipeline);
+			mCommandBuffers[i]->bindGraphicPipeline(mPipeline);
 
-				std::vector<VkDescriptorSet> descriptorSets = { mSphereNode->mUniformManager->getDescriptorSet(mCurrentFrame) , mSphereNode->mMaterial->getDescriptorSet(mCurrentFrame) };
-				mCommandBuffers[i]->bindDescriptorSets(mPipeline->getPipelineLayout(), 0, descriptorSets.size(), descriptorSets.data());
+			std::vector<VkDescriptorSet> descriptorSets = { mSphereNode->mUniformManager->getDescriptorSet(mCurrentFrame) , mSphereNode->mMaterial->getDescriptorSet(mCurrentFrame) };
+			mCommandBuffers[i]->bindDescriptorSets(mPipeline->getPipelineLayout(), 0, descriptorSets.size(), descriptorSets.data());
 
 
-				mCommandBuffers[i]->pushConstants(mPipeline->getPipelineLayout(), mPushConstantManager->getConstantParam().stageFlags,
-				mPushConstantManager->getConstantParam().offset, mPushConstantManager->getConstantParam().size, &mPushConstantManager->getConstantData());
+			mCommandBuffers[i]->pushConstants(mPipeline->getPipelineLayout(), mPushConstantManager->getConstantParam().stageFlags,
+			mPushConstantManager->getConstantParam().offset, mPushConstantManager->getConstantParam().size, &mPushConstantManager->getConstantData());
 
 
 

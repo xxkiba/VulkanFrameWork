@@ -41,8 +41,7 @@ namespace FF::Wrapper {
 	}
 
 	Image::Image(const Device::Ptr& device,
-		const int& width,
-		const int& height,
+		const int& width,const int& height,
 		const VkFormat format,
 		const VkImageType& imageType,
 		const VkImageTiling& tiling,
@@ -194,7 +193,7 @@ namespace FF::Wrapper {
 			break;
 
 		}
-		mImageLayout = newLayout;
+		
 
 		auto commandBuffer = CommandBuffer::create(mDevice, commandPool);
 		commandBuffer->beginCommandBuffer(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
@@ -203,7 +202,7 @@ namespace FF::Wrapper {
 
 		commandBuffer->submitCommandBuffer(mDevice->getGraphicQueue());
 		commandBuffer->waitCommandBuffer(mDevice->getGraphicQueue());
-
+		mImageLayout = newLayout;
 	}
 
 	void Image::fillImageData(size_t size, const void* pData, const CommandPool::Ptr& commandPool) {

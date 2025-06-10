@@ -85,7 +85,6 @@ namespace FF::Wrapper {
 		[[nodiscard]] auto getWidth() const { return mExtent.width; }
 		[[nodiscard]] auto getHeight() const { return mExtent.height; }
 		[[nodiscard]] auto getDepth() const { return mExtent.depth; }
-		[[nodiscard]] auto getAspectFlag() const { return mImageLayout; }
 		[[nodiscard]] auto getFormat() const { return mFormat; }
 		[[nodiscard]] auto getSize() const { return mSize; }
 		[[nodiscard]] auto getAlignment() const { return mAlignment; }

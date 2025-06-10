@@ -18,6 +18,8 @@ namespace FF::Wrapper {
 		for (size_t i = 0; i < mDescriptorSets.size(); i++) {
 			//for each descriptor set, we need to put params info into the descriptor set
 			std::vector<VkWriteDescriptorSet> descriptorWrites;
+			std::vector<std::vector<VkDescriptorImageInfo>> imageInfoArrays; // Save All Image Info for Combined Image Sampler
+
 			for (const auto& param : params) {
 
 				VkWriteDescriptorSet descriptorWrite{};
@@ -28,7 +30,13 @@ namespace FF::Wrapper {
 				descriptorWrite.descriptorType = param->mDescriptorType;
 				descriptorWrite.descriptorCount = param->mCount;
 				if (param->mDescriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) {
-					descriptorWrite.pImageInfo = &param->mTexture->getImageInfo();
+					// For combined image sampler, we need to create a vector of VkDescriptorImageInfo
+					std::vector<VkDescriptorImageInfo> infos(param->mCount);
+					for (size_t j = 0; j < param->mCount; ++j) {
+						infos[j] = param->mTextures[j]->getImageInfo();
+					}
+					imageInfoArrays.push_back(std::move(infos));// Need to ensure infos live vkUpdateDescriptorSets
+					descriptorWrite.pImageInfo = imageInfoArrays.back().data();
 				}
 				else if (param->mDescriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER) {
 					descriptorWrite.pBufferInfo = &param->mBuffers[i]->getBufferInfo();

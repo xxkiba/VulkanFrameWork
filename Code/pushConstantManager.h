@@ -10,8 +10,7 @@ namespace FF {
 	};
 
 	struct constantData {
-		glm::mat4 constantVmatrix{ 1.0f };
-		glm::mat4 constantPmatrix{ 1.0f };
+		glm::vec4 offsets[3]{}; // For future use, currently not used
 	};
 
 	class PushConstantManager {
@@ -25,9 +24,9 @@ namespace FF {
 		void init();
 		const Wrapper::ConstantRange::Ptr& getPushConstantRanges();
 		const constantParam& getConstantParam() const;
-		void updateConstantData(const glm::mat4& vMatrix, const glm::mat4& pMatrix) {
-			mConstantData.constantVmatrix = vMatrix;
-			mConstantData.constantPmatrix = pMatrix;
+		void updateConstantData(const glm::vec4 offsets0,const glm::vec4 offsets1) {
+			mConstantData.offsets[0] = offsets0;
+			mConstantData.offsets[1] = offsets1;
 		}
 		constantData& getConstantData();
 
