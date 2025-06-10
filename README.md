@@ -2,8 +2,6 @@
 
 一个使用 Vulkan API 进行图形渲染学习的项目。
 
-```
-
 ## 构建要求
 
 - Visual Studio 2019 或更高版本
@@ -28,10 +26,10 @@
    ```
    Code/
    ThirdParty/
-       └── VulkanSDK/
-           ├── Include/
-           ├── Lib/
-           └── ...
+      └── VulkanSDK/
+         ├── Include/
+         ├── Lib/
+         └── ...
    ```
 
 ### 3. 使用 Visual Studio 构建项目
@@ -131,10 +129,10 @@ Since Vulkan library files are large, they are not included in the project. You 
    ```
    Code/
    ThirdParty/
-       └── VulkanSDK/
-           ├── Include/
-           ├── Lib/
-           └── ...
+      └── VulkanSDK/
+         ├── Include/
+         ├── Lib/
+         └── ...
    ```
 
 ### 3. Build Project with Visual Studio
