@@ -2,18 +2,6 @@
 
 一个使用 Vulkan API 进行图形渲染学习的项目。
 
-## 项目结构
-
-```
-VulkanLearning/
-├── Code/
-│   ├── assets/          # 资源文件
-│   ├── shaders/         # 着色器文件
-│   ├── texture/         # 纹理文件
-│   ├── vulkanWrapper/   # Vulkan 包装类
-│   ├── ThirdParty/      # 第三方库目录
-│   ├── CMakeLists.txt   # CMake 配置文件
-│   └── ...              # 其他源码文件
 ```
 
 ## 构建要求
@@ -39,7 +27,7 @@ VulkanLearning/
 3. 确保目录结构如下：
    ```
    Code/
-   └── ThirdParty/
+   ThirdParty/
        └── VulkanSDK/
            ├── Include/
            ├── Lib/
@@ -118,19 +106,6 @@ VulkanLearning/
 
 A graphics rendering learning project using the Vulkan API.
 
-## Project Structure
-
-```
-VulkanLearning/
-├── Code/
-│   ├── assets/          # Resource files
-│   ├── shaders/         # Shader files
-│   ├── texture/         # Texture files
-│   ├── vulkanWrapper/   # Vulkan wrapper classes
-│   ├── ThirdParty/      # Third-party libraries directory
-│   ├── CMakeLists.txt   # CMake configuration file
-│   └── ...              # Other source files
-```
 
 ## Build Requirements
 
@@ -155,7 +130,7 @@ Since Vulkan library files are large, they are not included in the project. You 
 3. Ensure the directory structure is as follows:
    ```
    Code/
-   └── ThirdParty/
+   ThirdParty/
        └── VulkanSDK/
            ├── Include/
            ├── Lib/
