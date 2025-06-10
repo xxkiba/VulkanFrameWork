@@ -2,6 +2,20 @@
 
 一个使用 Vulkan API 进行图形渲染学习的项目。
 
+## 项目结构
+
+```
+VulkanLearning/
+├── Code/
+│   ├── assets/          # 资源文件
+│   ├── shaders/         # 着色器文件
+│   ├── texture/         # 纹理文件
+│   ├── vulkanWrapper/   # Vulkan 包装类
+│   ├── ThirdParty/      # 第三方库目录
+│   ├── CMakeLists.txt   # CMake 配置文件
+│   └── ...              # 其他源码文件
+```
+
 ## 构建要求
 
 - Visual Studio 2019 或更高版本
@@ -97,3 +111,119 @@
 ---
 
 **注意**: 确保你的显卡支持 Vulkan API。可以通过运行 `vulkaninfo` 命令来检查 Vulkan 支持情况。
+
+---
+
+# VulkanLearning (English Version)
+
+A graphics rendering learning project using the Vulkan API.
+
+## Project Structure
+
+```
+VulkanLearning/
+├── Code/
+│   ├── assets/          # Resource files
+│   ├── shaders/         # Shader files
+│   ├── texture/         # Texture files
+│   ├── vulkanWrapper/   # Vulkan wrapper classes
+│   ├── ThirdParty/      # Third-party libraries directory
+│   ├── CMakeLists.txt   # CMake configuration file
+│   └── ...              # Other source files
+```
+
+## Build Requirements
+
+- Visual Studio 2019 or higher
+- CMake 3.20 or higher
+- Vulkan SDK
+
+## Build Steps
+
+### 1. Download and Install Vulkan SDK
+
+1. Visit the [Vulkan SDK official website](https://vulkan.lunarg.com/sdk/home)
+2. Download the latest Vulkan SDK version for your system
+3. Follow the installation wizard to complete the installation
+
+### 2. Set up Vulkan Library Files
+
+Since Vulkan library files are large, they are not included in the project. You need to:
+
+1. Locate your installed Vulkan SDK directory (usually at `C:\VulkanSDK\[version]\`)
+2. Copy the entire Vulkan SDK folder to the project's `Code/ThirdParty/` directory
+3. Ensure the directory structure is as follows:
+   ```
+   Code/
+   └── ThirdParty/
+       └── VulkanSDK/
+           ├── Include/
+           ├── Lib/
+           └── ...
+   ```
+
+### 3. Build Project with Visual Studio
+
+1. Open Visual Studio
+2. Select "Open a local folder"
+3. Navigate to and select the `Code` folder (the one containing CMakeLists.txt)
+4. Visual Studio will automatically detect the CMake project and start configuration
+5. Select **x64-Debug** configuration in the toolbar
+6. Click "Build" or press `Ctrl+Shift+B` to compile the project
+
+### 4. Run the Project
+
+You may encounter missing resource files issue on first run. Solution:
+
+1. After successful compilation, locate the generated executable directory, usually at:
+   ```
+   out/build/x64-Debug/
+   ```
+   or
+   ```
+   out/x64-Debug/
+   ```
+
+2. Copy the following folders to the executable directory:
+   - `Code/shaders/` → Copy to executable directory
+   - `Code/assets/` → Copy to executable directory
+
+3. Ensure the directory structure is as follows:
+   ```
+   [Executable Directory]/
+   ├── VulkanLearning.exe
+   ├── shaders/
+   └── assets/
+   ```
+
+4. Now you can run the project
+
+## Common Issues
+
+### Q: Compilation fails with "Vulkan headers not found"
+**A:** Ensure Vulkan SDK is properly installed and the SDK folder is placed in the `Code/ThirdParty/` directory.
+
+### Q: Program crashes or shows black screen when running
+**A:** Check if you have copied the `shaders` and `assets` folders to the executable directory.
+
+### Q: Linking errors
+**A:** Ensure you're using x64 configuration for compilation. 32-bit configuration may cause linking issues.
+
+## Development Environment
+
+- **Graphics API**: Vulkan
+- **Build System**: CMake
+- **Compiler**: MSVC (Visual Studio)
+- **Platform**: Windows x64
+
+## License
+
+[Add your license information here]
+
+## Contributing
+
+Issues and Pull Requests are welcome!
+
+---
+
+**Note**: Make sure your graphics card supports the Vulkan API. You can check Vulkan support by running the `vulkaninfo` command.
