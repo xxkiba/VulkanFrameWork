@@ -13,7 +13,13 @@ namespace FF {
 		static Ptr create(const Wrapper::Device::Ptr& device,const Wrapper::CommandPool::Ptr &commandPool, const std::string& filePath) {
 			return std::make_shared<Texture>(device, commandPool,filePath);
 		}
+		static Ptr create(const Wrapper::Device::Ptr& device, const Wrapper::CommandPool::Ptr& commandPool, const std::array<std::string, 6>& cubemapPaths) {
+			return std::make_shared<Texture>(device, commandPool,cubemapPaths);
+		}
 		Texture(const Wrapper::Device::Ptr& device, const Wrapper::CommandPool::Ptr &commandPool,const std::string& filePath);
+		Texture(const Wrapper::Device::Ptr& device,
+			const Wrapper::CommandPool::Ptr& commandPool,
+			const std::array<std::string, 6>& cubemapPaths);
 		~Texture();
 		void createTextureImageView();
 		void createTextureSampler();

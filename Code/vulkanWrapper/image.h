@@ -59,8 +59,9 @@ namespace FF::Wrapper {
 			const VkImageUsageFlags& usage,
 			const VkMemoryPropertyFlags& properties,
 			const VkSampleCountFlagBits& sample,
-			const VkImageAspectFlags& aspectFlag) {
-			return std::make_shared<Image>(device, width, height, format, imageType, tiling, usage, properties,sample, aspectFlag);
+			const VkImageAspectFlags& aspectFlag,
+			const bool& isCubeMap = false) {
+			return std::make_shared<Image>(device, width, height, format, imageType, tiling, usage, properties,sample, aspectFlag, isCubeMap);
 		}
 		Image(const Device::Ptr& device, 
 			const int& width,
@@ -71,7 +72,8 @@ namespace FF::Wrapper {
 			const VkImageUsageFlags& usage,
 			const VkMemoryPropertyFlags& properties, 
 			const VkSampleCountFlagBits& sample,
-			const VkImageAspectFlags& aspectFlag);
+			const VkImageAspectFlags& aspectFlag,
+			const bool& isCubeMap = false);
 		~Image();
 		void createImageView(VkImageViewType viewType);
 		void destroyImageView();
@@ -102,7 +104,7 @@ namespace FF::Wrapper {
 			VkImageSubresourceRange subresourceRange,
 			const CommandPool::Ptr& commandPool);
 
-		void fillImageData(size_t size, const void* pData, const CommandPool::Ptr& commandPool);
+		void fillImageData(size_t size, const void* pData, const CommandPool::Ptr& commandPool,const bool& isCubeMap = false);
 
 	private:
 		uint32_t findMemoryType(Device::Ptr device, uint32_t typeFilter, VkMemoryPropertyFlags properties);

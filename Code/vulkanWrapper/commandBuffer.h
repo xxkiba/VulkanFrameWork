@@ -52,7 +52,7 @@ namespace FF::Wrapper {
 
 		void copyBufferToBuffer(const VkBuffer& srcBuffer, const VkBuffer& dstBuffer, uint32_t copyInfoCount, const std::vector<VkBufferCopy>& copyRegions);
 		
-		void copyBufferToImage(const VkBuffer& srcBuffer, VkImage dstImage, VkImageLayout dstImageLayout, size_t width, size_t height);
+		void copyBufferToImage(const VkBuffer& srcBuffer, VkImage dstImage, VkImageLayout dstImageLayout, size_t width, size_t height, bool isCubeMap = false);
 
 
 		void submitCommandBuffer(VkQueue queue, VkFence fence = VK_NULL_HANDLE);
@@ -62,6 +62,7 @@ namespace FF::Wrapper {
 		void transferImageLayout(const VkImageMemoryBarrier &imageMemoryBarrier, VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask);
 
 	private:
+		VkFence mFence = VK_NULL_HANDLE;
 		VkCommandBuffer mCommandBuffer{ VK_NULL_HANDLE };
 		CommandPool::Ptr mCommandPool{ nullptr };
 		Device::Ptr mDevice{ nullptr };

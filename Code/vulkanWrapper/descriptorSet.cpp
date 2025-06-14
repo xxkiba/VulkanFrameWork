@@ -35,7 +35,7 @@ namespace FF::Wrapper {
 					for (size_t j = 0; j < param->mCount; ++j) {
 						infos[j] = param->mTextures[j]->getImageInfo();
 					}
-					imageInfoArrays.push_back(std::move(infos));// Need to ensure infos live vkUpdateDescriptorSets
+					imageInfoArrays.push_back(std::move(infos));// Need to ensure infos live until the end of vkUpdateDescriptorSets
 					descriptorWrite.pImageInfo = imageInfoArrays.back().data();
 				}
 				else if (param->mDescriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER) {
@@ -47,7 +47,7 @@ namespace FF::Wrapper {
 			vkUpdateDescriptorSets(mDevice->getDevice(), static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
 		}
 	}
-	DescriptorSet::~DescriptorSet() {
+	DescriptorSet::~DescriptorSet() {// Descriptor set will be destroyed by descriptor pool, not need to free it here
 		
 	}
 }

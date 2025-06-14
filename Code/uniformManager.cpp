@@ -35,14 +35,19 @@ void UniformManager::init(const Wrapper::Device::Ptr& device, const Wrapper::Com
 	}
 	mUniformParameters.push_back(objectParam);
 
-	//auto textureParam = Wrapper::UniformParameter::create();
-	//textureParam->mBinding = 2;
-	//textureParam->mDescriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	//textureParam->mCount = 1;
-	//textureParam->mStageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-	////textureParam->mSize = sizeof(VkDescriptorImageInfo);
-	//textureParam->mTexture = Texture::create(mDevice, mcommandpool, "assets/book.jpg");
-	//mUniformParameters.push_back(textureParam);
+	auto textureParam = Wrapper::UniformParameter::create();
+	textureParam->mBinding = 2;
+	textureParam->mDescriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	textureParam->mCount = 1;
+	textureParam->mStageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+	//textureParam->mSize = sizeof(VkDescriptorImageInfo);
+	std::array<std::string, 6> cubemapPaths = {
+		"assets/px.jpg","assets/nx.jpg",
+		"assets/py.jpg","assets/ny.jpg",
+		"assets/pz.jpg","assets/nz.jpg"
+	};
+	textureParam->mTextures = { Texture::create(mDevice, mcommandpool, cubemapPaths) };
+	mUniformParameters.push_back(textureParam);
 
 
 

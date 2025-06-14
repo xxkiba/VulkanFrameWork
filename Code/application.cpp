@@ -47,7 +47,8 @@ namespace FF {
 		//mHeight = mSwapChain->getSwapChainExtent().height;
 		
 		mRenderPass = Wrapper::RenderPass::create(mDevice);
-		createRenderPass();
+		mRenderPass = createRenderPassForSwapChain();
+		//createRenderPass();
 
 		mSwapChain->createFrameBuffers(mRenderPass);
 
@@ -283,7 +284,8 @@ namespace FF {
 		mHeight = mSwapChain->getSwapChainExtent().height;
 
 		mRenderPass = Wrapper::RenderPass::create(mDevice);
-		createRenderPass();
+		mRenderPass = createRenderPassForSwapChain();
+		//mRenderPass = createRenderPass();
 
 		mSwapChain->createFrameBuffers(mRenderPass);
 
@@ -291,6 +293,89 @@ namespace FF {
 		createCommandBuffers();
 
 		createSyncObjects();
+	}
+
+	Wrapper::RenderPass::Ptr Application::createRenderPassForSwapChain() {
+		auto swapChainRenderPass = Wrapper::RenderPass::create(mDevice);
+		// Create a render pass
+		// 
+		// 0: Final output color attachment
+		// 1: Resolve image(MultiSample)
+		// 2: Depth attachment
+
+		// 0: Final output color attachment, created by the swap chain, target of resolve operation, is also the target to be set in subpass
+		// Description of input canvas
+		VkAttachmentDescription finalAttachment{};
+		finalAttachment.format = mSwapChain->getSwapChainImageFormat();
+		finalAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+		finalAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+		finalAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+		finalAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		finalAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		finalAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		finalAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+		swapChainRenderPass->addAttachment(finalAttachment);
+
+		// Description of indexes and format of the attachments
+		VkAttachmentReference finalAttachmentRef{};
+		finalAttachmentRef.attachment = 0;
+		finalAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+		// 1: Resolve image(MultiSample), source of multisample operation
+		VkAttachmentDescription multiAttachment{};
+		multiAttachment.format = mSwapChain->getSwapChainImageFormat();
+		multiAttachment.samples = mDevice->getMaxUsableSampleCount();
+		multiAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+		multiAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+		multiAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		multiAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		multiAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		multiAttachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL; // The final layout of the multisample image is color attachment optimal
+		swapChainRenderPass->addAttachment(multiAttachment);
+
+		VkAttachmentReference multiAttachmentRef{};
+		multiAttachmentRef.attachment = 1; // The multisample image is the second attachment
+		multiAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL; // The layout of the multisample image is color attachment optimal
+
+
+		// 3: Depth attachment
+		// Description of depth canvas
+		VkAttachmentDescription depthAttachment{};
+		depthAttachment.format = Wrapper::Image::findDepthFormat(mDevice);
+		depthAttachment.samples = mDevice->getMaxUsableSampleCount();
+		depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+		depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+		swapChainRenderPass->addAttachment(depthAttachment);
+
+		VkAttachmentReference depthAttachmentRef{};
+		depthAttachmentRef.attachment = 2;
+		depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+
+
+		// Create subpass
+		Wrapper::SubPass subpass{};
+		subpass.addColorAttachmentReference(multiAttachmentRef);
+		subpass.setDepthStencilAttachmentReference(depthAttachmentRef);
+		subpass.setResolveAttachmentReference(finalAttachmentRef);
+		subpass.buildSubPassDescription();
+
+		swapChainRenderPass->addSubpass(subpass);
+
+		VkSubpassDependency dependency{};
+		dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+		dependency.dstSubpass = 0;
+		dependency.srcStageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+		dependency.srcAccessMask = 0;
+		dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+		dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
+		swapChainRenderPass->addDependency(dependency);
+		swapChainRenderPass->buildRenderPass();
+		return swapChainRenderPass;
 	}
 
 	void Application::createRenderPass() {
@@ -402,12 +487,12 @@ namespace FF {
 		for (size_t i = 0; i < mSwapChain->getImageCount(); i++) {
 			
 
-			VkRenderPassBeginInfo renderPassInfo{};
-			renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-			renderPassInfo.renderPass = mRenderPass->getRenderPass();
-			renderPassInfo.framebuffer = mSwapChain->getSwapChainFramebuffers()[i];
-			renderPassInfo.renderArea.offset = { 0, 0 };
-			renderPassInfo.renderArea.extent = mSwapChain->getSwapChainExtent();
+			VkRenderPassBeginInfo renderPassBeginInfo{};
+			renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+			renderPassBeginInfo.renderPass = mRenderPass->getRenderPass();
+			renderPassBeginInfo.framebuffer = mSwapChain->getSwapChainFramebuffers()[i];
+			renderPassBeginInfo.renderArea.offset = { 0, 0 };
+			renderPassBeginInfo.renderArea.extent = mSwapChain->getSwapChainExtent();
 
 			std::vector<VkClearValue> clearValues;
 
@@ -427,12 +512,12 @@ namespace FF {
 			clearDepth.depthStencil = { 1.0f, 0 };
 			clearValues.push_back(clearDepth);
 
-			renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
-			renderPassInfo.pClearValues = clearValues.data();
+			renderPassBeginInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
+			renderPassBeginInfo.pClearValues = clearValues.data();
 
 			mCommandBuffers[i]->beginCommandBuffer();
 			// Begin render pass
-			mCommandBuffers[i]->beginRenderPass(renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+			mCommandBuffers[i]->beginRenderPass(renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 
 			mCommandBuffers[i]->bindGraphicPipeline(mPipeline);

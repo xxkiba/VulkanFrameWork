@@ -254,7 +254,7 @@ namespace FF {
 		}
 		else {
 			cmdBuf->bindIndexBuffer(getIndexBuffer()->getBuffer(), 0, VK_INDEX_TYPE_UINT32);
-			cmdBuf->drawIndexed(getIndexCount(), 2, 0, 0, 0);
+			cmdBuf->drawIndexed(getIndexCount(), 1, 0, 0, 0);
 		}
 	}
 

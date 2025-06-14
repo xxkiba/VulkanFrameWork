@@ -20,13 +20,17 @@ layout(set = 0,binding = 1) uniform ModelMatrix {
 
 layout(location=0)out vec4 V_Texcoord;
 layout(location=1)out vec4 V_NormalWS;
-layout(location=2)flat out uint V_instanceID;
+layout(location=2)out vec4 V_PositionWS;
+layout(location=3)flat out uint V_instanceID;
+
 void main(){
     uint instanceID = gl_InstanceIndex;
     V_instanceID = instanceID;
     V_NormalWS=vpUBO.normalMatrix*normal;
     V_Texcoord=texcoord;
+    
     vec4 offset = Constants.offsets[instanceID];
     vec4 positionMS = vec4(position.xyz + offset.xyz,1.0);
-    gl_Position=vpUBO.projection * vpUBO.view * objectUBO.model*positionMS;//ndc
+    V_PositionWS=objectUBO.model*positionMS;//world space
+    gl_Position=vpUBO.projection * vpUBO.view * V_PositionWS;//ndc
 }

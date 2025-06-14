@@ -48,7 +48,8 @@ namespace FF::Wrapper {
 		const VkImageUsageFlags& usage,
 		const VkMemoryPropertyFlags& properties,
 		const VkSampleCountFlagBits& sample,
-		const VkImageAspectFlags &aspectFlags):mDevice(device),mFormat(format),mImageLayout(VK_IMAGE_LAYOUT_UNDEFINED){
+		const VkImageAspectFlags &aspectFlags,
+		const bool& isCubeMap):mDevice(device),mFormat(format),mImageLayout(VK_IMAGE_LAYOUT_UNDEFINED){
 		if (width == 0 || height == 0) {
 			throw std::runtime_error("Image width or height is zero!");
 		}
@@ -65,14 +66,14 @@ namespace FF::Wrapper {
 		imageInfo.imageType = imageType;
 		imageInfo.extent = mExtent;
 		imageInfo.mipLevels = 1;
-		imageInfo.arrayLayers = 1;
+		imageInfo.arrayLayers = isCubeMap ? 6 : 1;
 		imageInfo.format = format;
 		imageInfo.tiling = tiling;
 		imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 		imageInfo.usage = usage;
 		imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 		imageInfo.samples = sample;
-		imageInfo.flags = 0;
+		imageInfo.flags = isCubeMap ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT:0;
 		if (vkCreateImage(mDevice->getDevice(), &imageInfo, nullptr, &mImage) != VK_SUCCESS) {
 			throw std::runtime_error("Error: failed to create image!");
 		}
@@ -94,7 +95,7 @@ namespace FF::Wrapper {
 		VkImageViewCreateInfo viewInfo{};
 		viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
 		viewInfo.image = mImage;
-        viewInfo.viewType = (imageType & VK_IMAGE_TYPE_2D) ? VK_IMAGE_VIEW_TYPE_2D : VK_IMAGE_VIEW_TYPE_3D;
+        viewInfo.viewType = isCubeMap ? VK_IMAGE_VIEW_TYPE_CUBE : ((imageType & VK_IMAGE_TYPE_2D) ? VK_IMAGE_VIEW_TYPE_2D : VK_IMAGE_VIEW_TYPE_3D);
 		viewInfo.format = format;
 		viewInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
 		viewInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
@@ -104,7 +105,7 @@ namespace FF::Wrapper {
 		viewInfo.subresourceRange.baseMipLevel = 0;
 		viewInfo.subresourceRange.levelCount = 1;
 		viewInfo.subresourceRange.baseArrayLayer = 0;
-		viewInfo.subresourceRange.layerCount = 1;
+		viewInfo.subresourceRange.layerCount = isCubeMap ? 6 : 1;
 
 		if (vkCreateImageView(mDevice->getDevice(), &viewInfo, nullptr, &mImageView) != VK_SUCCESS) {
 			throw std::runtime_error("Error: failed to create image view!");
@@ -201,11 +202,11 @@ namespace FF::Wrapper {
 		commandBuffer->endCommandBuffer();
 
 		commandBuffer->submitCommandBuffer(mDevice->getGraphicQueue());
-		commandBuffer->waitCommandBuffer(mDevice->getGraphicQueue());
+		//commandBuffer->waitCommandBuffer(mDevice->getGraphicQueue());
 		mImageLayout = newLayout;
 	}
 
-	void Image::fillImageData(size_t size, const void* pData, const CommandPool::Ptr& commandPool) {
+	void Image::fillImageData(size_t size, const void* pData, const CommandPool::Ptr& commandPool,const bool& isCubeMap) {
 		assert(pData != nullptr);
 		assert(size > 0);
 
@@ -213,11 +214,11 @@ namespace FF::Wrapper {
 
 		auto commandBuffer = CommandBuffer::create(mDevice, commandPool);
 		commandBuffer->beginCommandBuffer(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
-		commandBuffer->copyBufferToImage(stageBuffer->getBuffer(), mImage, mImageLayout, mExtent.width, mExtent.height);
+		commandBuffer->copyBufferToImage(stageBuffer->getBuffer(), mImage, mImageLayout, mExtent.width, mExtent.height,isCubeMap);
 		commandBuffer->endCommandBuffer();
 
 		commandBuffer->submitCommandBuffer(mDevice->getGraphicQueue());
-		commandBuffer->waitCommandBuffer(mDevice->getGraphicQueue());
+		//commandBuffer->waitCommandBuffer(mDevice->getGraphicQueue());
 
 	}
 

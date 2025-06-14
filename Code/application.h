@@ -55,6 +55,7 @@ namespace FF {
 
 	private:
 		Wrapper::Pipeline::Ptr createPipeline(const std::string& vertexShaderFile, const std::string& fragShaderFile);
+		Wrapper::RenderPass::Ptr createRenderPassForSwapChain();
 		void createRenderPass();
 		void createCommandBuffers();
 		void createSyncObjects();

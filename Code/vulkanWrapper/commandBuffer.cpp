@@ -13,6 +13,10 @@ namespace FF::Wrapper {
 		}
 	}
 	CommandBuffer::~CommandBuffer() { 
+		if (mFence != VK_NULL_HANDLE) {
+			vkWaitForFences(mDevice->getDevice(), 1, &mFence, VK_TRUE, UINT64_MAX);
+			vkDestroyFence(mDevice->getDevice(), mFence, nullptr);
+		}
 		if (mCommandBuffer != VK_NULL_HANDLE) {
 			vkFreeCommandBuffers(mDevice->getDevice(), mCommandPool->getCommandPool(), 1, &mCommandBuffer);
 			mCommandBuffer = VK_NULL_HANDLE;
@@ -77,26 +81,54 @@ namespace FF::Wrapper {
 		vkCmdCopyBuffer(mCommandBuffer, srcBuffer, dstBuffer, copyInfoCount, copyRegions.data());
 	}
 
-	void CommandBuffer::copyBufferToImage(const VkBuffer& srcBuffer, VkImage dstImage, VkImageLayout dstImageLayout, size_t width, size_t height) {
+	void CommandBuffer::copyBufferToImage(const VkBuffer& srcBuffer, VkImage dstImage, VkImageLayout dstImageLayout, size_t width, size_t height, bool isCubeMap) {
 
-		VkBufferImageCopy region{};
-		region.bufferOffset = 0;
+		if (!isCubeMap) {
+			// Single 2D image case
+			VkBufferImageCopy region{};
+			region.bufferOffset = 0;
+			region.bufferRowLength = 0;
+			region.bufferImageHeight = 0;
+			region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			region.imageSubresource.mipLevel = 0;
+			region.imageSubresource.baseArrayLayer = 0;
+			region.imageSubresource.layerCount = 1;
+			region.imageOffset = { 0, 0, 0 };
+			region.imageExtent = { static_cast<uint32_t>(width), static_cast<uint32_t>(height), 1 };
 
-		// no need to padding
-		region.bufferRowLength = 0;
-		region.bufferImageHeight = 0;
-
-		region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		region.imageSubresource.mipLevel = 0;
-		region.imageSubresource.baseArrayLayer = 0;
-		region.imageSubresource.layerCount = 1;
-		region.imageOffset = { 0, 0, 0 };
-		region.imageExtent = { static_cast<uint32_t>(width), static_cast<uint32_t>(height), 1 };
-
-		vkCmdCopyBufferToImage(mCommandBuffer, srcBuffer, dstImage, dstImageLayout, 1, &region);
+			vkCmdCopyBufferToImage(mCommandBuffer, srcBuffer, dstImage, dstImageLayout, 1, &region);
+		}
+		else {
+			// Cubemap
+			std::vector<VkBufferImageCopy> regions(6);
+			VkDeviceSize layerSize = width * height * 4; // RGBA, assuming 4 bytes per pixel
+			// 6 regions needed for each face of the cubemap
+			for (uint32_t i = 0; i < 6; ++i) {
+				regions[i].bufferOffset = i * layerSize; // Calculate offset for each face
+				regions[i].bufferRowLength = 0;
+				regions[i].bufferImageHeight = 0;
+				regions[i].imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+				regions[i].imageSubresource.mipLevel = 0;
+				regions[i].imageSubresource.baseArrayLayer = i; // Set base array layer for each face
+				regions[i].imageSubresource.layerCount = 1;
+				regions[i].imageOffset = { 0, 0, 0 };
+				regions[i].imageExtent = { static_cast<uint32_t>(width), static_cast<uint32_t>(height), 1 };
+			}
+			// Copy all 6 faces of the cubemap
+			vkCmdCopyBufferToImage(mCommandBuffer, srcBuffer, dstImage, dstImageLayout,
+				static_cast<uint32_t>(regions.size()), regions.data());
+		}
 	}
 
 	void CommandBuffer::submitCommandBuffer(VkQueue queue, VkFence fence) {
+		if (fence == VK_NULL_HANDLE) {
+			VkFenceCreateInfo fenceInfo{};
+			fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+			if (vkCreateFence(mDevice->getDevice(), &fenceInfo, nullptr, &mFence) != VK_SUCCESS) {
+				throw std::runtime_error("failed to create fence!");
+			}
+			fence = mFence;
+		}
 		VkSubmitInfo submitInfo{};
 		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 		submitInfo.commandBufferCount = 1;
