@@ -19,8 +19,7 @@ public:
 	UniformManager();
 	~UniformManager();
 	void init(const Wrapper::Device::Ptr &device, const Wrapper::CommandPool::Ptr &commandPool,int frameCount);
-	void updateUniformBuffer(const NVPMatrices &vpMatrices, const ObjectUniform &objectUniform,const int frameCount);
-	void bindDescriptorSet(VkCommandBuffer commandBuffer, uint32_t currentFrame);
+	void updateUniformBuffer(const NVPMatrices &vpMatrices, const ObjectUniform &objectUniform, const cameraParameters& cameraParams, const int frameCount);
 
 	[[nodiscard]] auto getDescriptorLayout() const {
 		return mDescriptorLayout;

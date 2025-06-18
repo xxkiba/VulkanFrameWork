@@ -131,14 +131,14 @@ namespace FF {
         mPipeline->build();
     }
 
-    void ScreenQuadPass::render(const Wrapper::CommandBuffer::Ptr& cmdBuf) {
+    void ScreenQuadPass::render(const Wrapper::CommandBuffer::Ptr& cmdBuf,const Wrapper::RenderPass::Ptr& renderPass, VkFramebuffer& frameBuffer) {
         if (!mBuilt) build();
 
         // begin render pass
         VkRenderPassBeginInfo rpbi{};
         rpbi.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-        rpbi.renderPass = mOutputTarget->getRenderPass()->getRenderPass();
-        rpbi.framebuffer = mOutputTarget->getFramebuffer();
+        rpbi.renderPass = renderPass->getRenderPass();
+		rpbi.framebuffer = frameBuffer;
         rpbi.renderArea.offset = { 0, 0 };
         rpbi.renderArea.extent = { mOutputTarget->getWidth(), mOutputTarget->getHeight() };
         std::vector<VkClearValue> clearValues(1);

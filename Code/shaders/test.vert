@@ -30,7 +30,7 @@ void main(){
     V_Texcoord=texcoord;
     
     vec4 offset = Constants.offsets[instanceID];
-    vec4 positionMS = vec4(position.xyz + offset.xyz,1.0);
+    vec4 positionMS = vec4(position.xyz,1.0);
     V_PositionWS=objectUBO.model*positionMS;//world space
     gl_Position=vpUBO.projection * vpUBO.view * V_PositionWS;//ndc
 }

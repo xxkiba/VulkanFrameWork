@@ -1,30 +1,50 @@
 #include "Material.h"
 
 namespace FF {
-    Material::Material() {}
+    Material::Material() {
+		mTexturePaths.clear();
+		mAttachedImages.clear();
+		mTextures.clear();
+    }
     
+
+    void Material::attachTexturePath(const std::string& path) {
+        mTexturePaths.push_back(path);
+    }
+
+    void Material::attachTexturePaths(const std::vector<std::string>& paths) {
+        mTexturePaths.insert(mTexturePaths.end(), paths.begin(), paths.end());
+    }
+
+
+	void Material::attachImages(const std::vector<Wrapper::Image::Ptr>& perFrameImages) {
+		mAttachedImagesPerFrame.push_back(perFrameImages);
+	}
     void Material::init(const Wrapper::Device::Ptr& device,
         const Wrapper::CommandPool::Ptr& commandPool,
-        std::vector<std::string> texturePaths,
         int frameCount) {
 
-        // 1. Create texture
-		mTextures.resize(texturePaths.size());
-        for (size_t i = 0; i < texturePaths.size(); i++) {
-            auto textureParam = Wrapper::UniformParameter::create();
-            mTextures[i] = Texture::create(device, commandPool, texturePaths[i]);
-        }
 
         std::vector<Wrapper::UniformParameter::Ptr> params;
         
 
-        // 2. Create uniform parameter for the texture
+        // 1. Create uniform parameter for the texture
         auto textureParam = Wrapper::UniformParameter::create();
         textureParam->mBinding = 0;
         textureParam->mDescriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		textureParam->mCount = static_cast<uint32_t>(mTextures.size()); // Number of textures
+		textureParam->mCount = static_cast<uint32_t>(mTexturePaths.size() + mAttachedImagesPerFrame.size()); // Number of textures
         textureParam->mStageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-		textureParam->mTextures = mTextures; // vector of textures
+
+		// 2. Create textures for each frame
+		textureParam->mTextures.resize(frameCount); // Resize to frameCount, each frame will have its own textures
+        for (int i = 0; i < frameCount; i++) {
+            for (const auto& path : mTexturePaths) {
+                textureParam->mTextures[i].push_back(Texture::create(device, commandPool, path));
+            }
+            for (const auto& images : mAttachedImagesPerFrame) {
+                textureParam->mTextures[i].push_back(Texture::createFromImage(device, images[i]));
+            }
+        }
         params.push_back(textureParam);
 
 

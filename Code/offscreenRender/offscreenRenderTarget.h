@@ -14,35 +14,42 @@ namespace FF {
         static Ptr create(const Wrapper::Device::Ptr& device,
             const Wrapper::CommandPool::Ptr& commandPool,
             uint32_t width, uint32_t height,
-            int colorCount,
-            VkFormat colorFormat = VK_FORMAT_R8G8B8A8_UNORM,
-            VkFormat depthFormat = VK_FORMAT_D32_SFLOAT);
+            uint32_t imageCount,
+            VkFormat colorFormat = VK_FORMAT_R32G32B32A32_SFLOAT,
+            VkFormat depthFormat = VK_FORMAT_D32_SFLOAT) {
+			return std::make_shared<OffscreenRenderTarget>(device, commandPool, width, height, imageCount, colorFormat, depthFormat);
+        }
 
         OffscreenRenderTarget(const Wrapper::Device::Ptr& device,
             const Wrapper::CommandPool::Ptr& commandPool,
             uint32_t width, uint32_t height,
-            int colorCount,
+			uint32_t imageCount,
             VkFormat colorFormat,
             VkFormat depthFormat);
 
         ~OffscreenRenderTarget();
+    public:
 
         void setClearColor(int idx, float r, float g, float b, float a);
         void setClearDepth(float depth, uint32_t stencil);
         void recreate(uint32_t width, uint32_t height); // resize/÷ÿΩ®
 
-        VkFramebuffer getFramebuffer() const { return mFramebuffer; }
+		Wrapper::Image::Ptr getRenderTargetImage(int idx) const { return mRenderTargetImages[idx]; }
+        const std::vector<Wrapper::Image::Ptr>& getRenderTargetImages() const { return mRenderTargetImages; }
+
+
+		std::vector<VkFramebuffer> getOffScreenFramebuffers() const { return mOffScreenFramebuffers; }
         Wrapper::RenderPass::Ptr getRenderPass() const { return mRenderPass; }
-        VkImageView getColorImageView(int idx) const { return mColorAttachments.at(idx)->getImageView(); }
-        VkImageView getDepthImageView() const { return mDepthAttachment->getImageView(); }
+
         uint32_t getWidth() const { return mWidth; }
         uint32_t getHeight() const { return mHeight; }
-        int getColorBufferCount() const { return mColorAttachments.size(); }
+
 
         VkCommandBuffer beginRendering(VkCommandBuffer cmd = nullptr);
 
+
     private:
-        void createAttachments();
+		void createImageEntities();
         void createRenderPass();
         void createFramebuffer();
         void cleanup();
@@ -51,15 +58,26 @@ namespace FF {
         Wrapper::Device::Ptr mDevice;
         Wrapper::CommandPool::Ptr mCommandPool;
         uint32_t mWidth, mHeight;
+		uint32_t mImageCount; // Number of images in the offscreen render target,by default the same as the swap chain image count
         int mColorBufferCount;
         VkFormat mColorFormat, mDepthFormat;
 
-        std::vector<Wrapper::Image::Ptr> mColorAttachments;
+        // Render Target Images
+        std::vector<Wrapper::Image::Ptr> mRenderTargetImages{}; // offscreen render target
+
+        // Depth image for the swapchain
+        std::vector<Wrapper::Image::Ptr> mDepthImages{};
+
+        // Multisampling image for the swapchain, transient image
+        std::vector<Wrapper::Image::Ptr> mMultisampleImages{};
+
+
         Wrapper::Image::Ptr mDepthAttachment;
         std::vector<VkClearValue> mClearValues;
         int mDepthBufferIndex;
 
         Wrapper::RenderPass::Ptr mRenderPass{ VK_NULL_HANDLE };
-        VkFramebuffer mFramebuffer{ VK_NULL_HANDLE };
+		std::vector<VkFramebuffer> mOffScreenFramebuffers{};
+
 	};
 }

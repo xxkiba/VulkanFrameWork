@@ -28,6 +28,7 @@
 #include "pushConstantManager.h"
 #include "Camera.h"
 #include "SceneNode.h"
+#include "OffscreenSceneNode.h"
 #include "model.h"
 namespace FF {
 
@@ -57,6 +58,7 @@ namespace FF {
 
 	private:
 		Wrapper::Pipeline::Ptr createPipeline(const std::string& vertexShaderFile, const std::string& fragShaderFile);
+		Wrapper::Pipeline::Ptr createScreenQuadPipeline(Wrapper::RenderPass::Ptr inRenderpass);
 		Wrapper::RenderPass::Ptr createRenderPassForSwapChain();
 		void createRenderPass();
 		void createCommandBuffers();
@@ -82,6 +84,7 @@ namespace FF {
 		Wrapper::SwapChain::Ptr mSwapChain{ nullptr };
 
 		Wrapper::Pipeline::Ptr mPipeline{ nullptr };
+		Wrapper::Pipeline::Ptr mScreenQuadPipeline{ nullptr }; // For rendering the offscreen render target to the screen
 		Wrapper::Pipeline::Ptr mBattleFirePipeline{ nullptr };
 
 		Wrapper::RenderPass::Ptr mRenderPass{ nullptr };
@@ -101,7 +104,9 @@ namespace FF {
 
 		Model::Ptr mModel{ nullptr };
 		NVPMatrices mNVPMatrices{};
+		cameraParameters mCameraParameters{};
 		SceneNode::Ptr mSphereNode{ nullptr };
+		OffscreenSceneNode::Ptr mOffscreenSphereNode{ nullptr };
 
 		OffscreenRenderTarget::Ptr mOffscreenRenderTarget{ nullptr };
 

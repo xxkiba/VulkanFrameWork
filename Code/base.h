@@ -36,3 +36,7 @@ struct ObjectUniform {
 	glm::mat4 mModelMatrix{ 1.0f };
 	//glm::vec4 mColor{ 1.0f, 1.0f, 1.0f, 1.0f };
 };
+
+struct cameraParameters {
+	glm::vec4 CameraWorldPosition{ 0.0f, 0.0f, 0.0f, 1.0f };
+};

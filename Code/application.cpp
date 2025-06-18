@@ -13,10 +13,12 @@ namespace FF {
 
 	void Application::onMouseMove(double xpos, double ypos) {
 		mSphereNode->mCamera.onMouseMove(xpos, ypos);
+		mOffscreenSphereNode->mCamera.onMouseMove(xpos, ypos);
 	}
 
 	void Application::onKeyPress(CAMERA_MOVE moveDirection) {
 		mSphereNode->mCamera.move(moveDirection);
+		mOffscreenSphereNode->mCamera.move(moveDirection);
 	}
 
 	void Application::initWindow() {
@@ -25,13 +27,17 @@ namespace FF {
 		mWindow->setApplication(shared_from_this());
 
 		mSphereNode = SceneNode::create();
+		mOffscreenSphereNode = OffscreenSceneNode::create();
 
-		mSphereNode->mCamera.lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		mSphereNode->mCamera.lookAt(glm::vec3(0.0f, 0.0f, 5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		mOffscreenSphereNode->mCamera.lookAt(glm::vec3(0.0f, 0.0f, 5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 		//mSphereNode->mCamera.update();
 
 		mSphereNode->mCamera.setPerpective(60.0f, static_cast<float>(mWidth) / static_cast<float>(mHeight), 0.1f, 100.0f);
+		mOffscreenSphereNode->mCamera.setPerpective(60.0f, static_cast<float>(mWidth) / static_cast<float>(mHeight), 0.1f, 100.0f);
 
 		mSphereNode->mCamera.setSpeed(0.001f);
+		mOffscreenSphereNode->mCamera.setSpeed(0.001f);
 	}
 
 	void Application::initVulkan() {
@@ -51,37 +57,70 @@ namespace FF {
 		//createRenderPass();
 
 		mSwapChain->createFrameBuffers(mRenderPass);
+		mOffscreenRenderTarget = OffscreenRenderTarget::create(
+			mDevice, mCommandPool,
+			mWidth, mHeight,
+			mSwapChain->getImageCount(),
+			VK_FORMAT_R32G32B32A32_SFLOAT, // Color format
+			VK_FORMAT_D24_UNORM_S8_UINT // Depth format
+		);
 
 		
 		mSphereNode->mUniformManager = UniformManager::create();
 		mSphereNode->mUniformManager->init(mDevice,mCommandPool, mSwapChain->getImageCount());
+		mOffscreenSphereNode->mUniformManager = UniformManager::create();
+		mOffscreenSphereNode->mUniformManager->init(mDevice, mCommandPool, mSwapChain->getImageCount());
 
-		mSphereNode->mMaterial = Material::create();
+
+		
 		std::vector<std::string> textureFiles;
 		textureFiles.push_back("assets/book.jpg");
 		textureFiles.push_back("assets/diffuse.jpg");
 		textureFiles.push_back("assets/metal.jpg");
-		mSphereNode->mMaterial->init(mDevice, mCommandPool, textureFiles,mSwapChain->getImageCount());
+
+		mOffscreenSphereNode->mMaterial = Material::create();
+		mOffscreenSphereNode->mMaterial->attachTexturePaths(textureFiles);
+		mOffscreenSphereNode->mMaterial->init(mDevice, mCommandPool, mSwapChain->getImageCount());
+
+		mSphereNode->mMaterial = Material::create();
+		mSphereNode->mMaterial->attachTexturePaths(textureFiles);
+		mSphereNode->mMaterial->attachImages(mOffscreenRenderTarget->getRenderTargetImages()); // Attach the offscreen render target images to the material
+		mSphereNode->mMaterial->init(mDevice, mCommandPool,mSwapChain->getImageCount());
+
+
+
+
+
 
 		mPushConstantManager = PushConstantManager::create();
 		mPushConstantManager->init();
 
 		// Create a model
 		Model::Ptr commonModel = Model::create(mDevice);
+		Model::Ptr offscreenModel = Model::create(mDevice);
 		if (useBattleFirePipeline) {
 			commonModel->loadBattleFireModel("assets/Sphere.rhsm", mDevice);
 			mSphereNode->mModels.push_back(commonModel);
-			mBattleFirePipeline = Wrapper::Pipeline::create(mDevice, mRenderPass);
 			mSphereNode->mModels[0]->setModelMatrix(glm::mat4(1.0f));
+
+			offscreenModel->loadBattleFireModel("assets/Sphere.rhsm", mDevice);
+			mOffscreenSphereNode->mModels.push_back(offscreenModel);
+			mOffscreenSphereNode->mModels[0]->setModelMatrix(glm::mat4(1.0f));
+
 			mPipeline = createPipeline("shaders/testVs.spv", "shaders/testFs.spv");
 		}
 		else {
 			commonModel->loadModel("assets/book.obj", mDevice);
 			mSphereNode->mModels.push_back(commonModel);
-			mPipeline = Wrapper::Pipeline::create(mDevice, mRenderPass);
 			mSphereNode->mModels[0]->setModelMatrix(glm::mat4(1.0f));
+
+			offscreenModel->loadBattleFireModel("assets/Sphere.rhsm", mDevice);
+			mOffscreenSphereNode->mModels.push_back(offscreenModel);
+			mOffscreenSphereNode->mModels[0]->setModelMatrix(glm::mat4(1.0f));
+
 			mPipeline = createPipeline("shaders/vs.spv","shaders/fs.spv");
 		}
+		mScreenQuadPipeline = createScreenQuadPipeline(mRenderPass);
 
 
 		createCommandBuffers();
@@ -99,7 +138,7 @@ namespace FF {
 		// Create a pipeline using the shader
 		// mPipeline = Wrapper::Pipeline::create(mDevice, mSwapChain, mShader);
 
-		Wrapper::Pipeline::Ptr mPipeline = Wrapper::Pipeline::create(mDevice, mRenderPass);
+		Wrapper::Pipeline::Ptr mPipeline = Wrapper::Pipeline::create(mDevice, mOffscreenRenderTarget->getRenderPass());
 
 		// Set up viewport and scissor
 		VkViewport viewport{};
@@ -120,10 +159,8 @@ namespace FF {
 
 		std::vector<Wrapper::Shader::Ptr> shaderGroup;
 		auto vertexShader = Wrapper::Shader::create(mDevice, vertexShaderFile, VK_SHADER_STAGE_VERTEX_BIT, "main");
-		//auto vertexShader = Wrapper::Shader::create(mDevice, "shaders/testVs.spv", VK_SHADER_STAGE_VERTEX_BIT, "main");
 		shaderGroup.push_back(vertexShader);
 		auto fragmentShader = Wrapper::Shader::create(mDevice, fragShaderFile, VK_SHADER_STAGE_FRAGMENT_BIT, "main");
-		//auto fragmentShader = Wrapper::Shader::create(mDevice, "shaders/testFs.spv", VK_SHADER_STAGE_FRAGMENT_BIT, "main");
 		shaderGroup.push_back(fragmentShader);
 
 		mPipeline->setShaderGroup(shaderGroup);
@@ -142,8 +179,8 @@ namespace FF {
 		mPipeline->mDynamicState.pDynamicStates = nullptr; // No dynamic state for now
 
 		// Layout of vertex data
-		auto bindingDescriptions = mSphereNode->mModels[0]->getVertexInputBindingDescriptions();
-		auto attributeDescriptions = mSphereNode->mModels[0]->getAttributeDescriptions();
+		auto bindingDescriptions = mOffscreenSphereNode->mModels[0]->getVertexInputBindingDescriptions();
+		auto attributeDescriptions = mOffscreenSphereNode->mModels[0]->getAttributeDescriptions();
 
 		// Vertex input state
 		mPipeline->mVertexInputState.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -226,8 +263,8 @@ namespace FF {
 		// Uniform transfer
 		mPipeline->mPipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 		
-		auto layout0 = mSphereNode->mUniformManager->getDescriptorLayout()->getLayout();
-		auto layout1 = mSphereNode->mMaterial->getDescriptorLayout()->getLayout();
+		auto layout0 = mOffscreenSphereNode->mUniformManager->getDescriptorLayout()->getLayout();
+		auto layout1 = mOffscreenSphereNode->mMaterial->getDescriptorLayout()->getLayout();
 
 		std::vector<VkDescriptorSetLayout> layouts = { layout0, layout1 };
 		mPipeline->mPipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(layouts.size());
@@ -242,7 +279,101 @@ namespace FF {
 		return mPipeline;
 	}
 
+	Wrapper::Pipeline::Ptr  Application::createScreenQuadPipeline(Wrapper::RenderPass::Ptr inRenderpass) {
+		auto screenQuadPipeline = Wrapper::Pipeline::create(mDevice, inRenderpass);
 
+		// Set up viewport and scissor
+		VkViewport viewport{};
+		viewport.x = 0.0f;
+		viewport.y = 0.0f;
+		viewport.width = static_cast<float>(mWidth);
+		viewport.height = static_cast<float>(mHeight);
+		viewport.minDepth = 0.0f;
+		viewport.maxDepth = 1.0f;
+
+
+		VkRect2D scissor{};
+		scissor.offset = { 0, 0 };
+		scissor.extent = { static_cast<uint32_t>(mWidth), static_cast<uint32_t>(mHeight) };
+
+		screenQuadPipeline->setViewports({ viewport });
+		screenQuadPipeline->setScissors({ scissor });
+
+
+		// Set viewport and scissor
+		screenQuadPipeline->mViewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+		screenQuadPipeline->mViewportState.viewportCount = static_cast<uint32_t>(screenQuadPipeline->mViewports.size());
+		screenQuadPipeline->mViewportState.pViewports = screenQuadPipeline->mViewports.data();
+		// Set scissor
+		screenQuadPipeline->mViewportState.scissorCount = static_cast<uint32_t>(screenQuadPipeline->mScissors.size());
+		screenQuadPipeline->mViewportState.pScissors = screenQuadPipeline->mScissors.data();
+
+
+		//Dynamic state if needed
+		screenQuadPipeline->mDynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+		screenQuadPipeline->mDynamicState.dynamicStateCount = 0; // No dynamic state for now
+		screenQuadPipeline->mDynamicState.pDynamicStates = nullptr; // No dynamic state for now
+
+		// shader
+		auto vs = Wrapper::Shader::create(mDevice, "shaders/full_screen_triangle.spv", VK_SHADER_STAGE_VERTEX_BIT, "main");
+		auto fs = Wrapper::Shader::create(mDevice, "shaders/screen_quad.spv", VK_SHADER_STAGE_FRAGMENT_BIT, "main");
+		std::vector<Wrapper::Shader::Ptr> shaders = { vs, fs };
+		screenQuadPipeline->setShaderGroup(shaders);
+
+		// Full screen triangle, no need for vertex buffer
+		screenQuadPipeline->mVertexInputState.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+		screenQuadPipeline->mVertexInputState.vertexBindingDescriptionCount = 0;
+		screenQuadPipeline->mVertexInputState.pVertexBindingDescriptions = nullptr;
+		screenQuadPipeline->mVertexInputState.vertexAttributeDescriptionCount = 0;
+		screenQuadPipeline->mVertexInputState.pVertexAttributeDescriptions = nullptr;
+
+		// Assembly
+		screenQuadPipeline->mAssemblyState.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+		screenQuadPipeline->mAssemblyState.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+		screenQuadPipeline->mAssemblyState.primitiveRestartEnable = VK_FALSE;
+
+		// Raster/depth/multisample
+		screenQuadPipeline->mRasterState.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+		screenQuadPipeline->mRasterState.polygonMode = VK_POLYGON_MODE_FILL;
+		screenQuadPipeline->mRasterState.lineWidth = 1.0f;
+		screenQuadPipeline->mRasterState.cullMode = VK_CULL_MODE_BACK_BIT; // No culling for full screen quad
+		screenQuadPipeline->mRasterState.frontFace = VK_FRONT_FACE_CLOCKWISE;
+		screenQuadPipeline->mRasterState.rasterizerDiscardEnable = VK_FALSE;
+
+		screenQuadPipeline->mMultisampleState.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+		screenQuadPipeline->mMultisampleState.sampleShadingEnable = VK_FALSE;
+		screenQuadPipeline->mMultisampleState.rasterizationSamples = mDevice->getMaxUsableSampleCount();
+
+		screenQuadPipeline->mDepthStencilState.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+		screenQuadPipeline->mDepthStencilState.depthTestEnable = VK_FALSE;
+		screenQuadPipeline->mDepthStencilState.depthWriteEnable = VK_FALSE;
+
+		// Blend
+		VkPipelineColorBlendAttachmentState blendAttachment{};
+		blendAttachment.blendEnable = VK_FALSE;
+		blendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+		screenQuadPipeline->pushBlendAttachment(blendAttachment);
+
+		screenQuadPipeline->mBlendState.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+		screenQuadPipeline->mBlendState.attachmentCount = uint32_t(screenQuadPipeline->mBlendAttachmentStates.size());
+		screenQuadPipeline->mBlendState.pAttachments = screenQuadPipeline->mBlendAttachmentStates.data();
+
+		// Pipeline Layout
+		screenQuadPipeline->mPipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+		auto layout0 = mSphereNode->mUniformManager->getDescriptorLayout()->getLayout();
+		auto layout1 = mSphereNode->mMaterial->getDescriptorLayout()->getLayout();
+
+		std::vector<VkDescriptorSetLayout> layouts = { layout0, layout1 };
+		screenQuadPipeline->mPipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(layouts.size());
+		screenQuadPipeline->mPipelineLayoutInfo.pSetLayouts = layouts.data();
+		auto pushConstantRange = mPushConstantManager->getPushConstantRanges()->getPushConstantRange();
+		// Transform the push constant ranges to VkPushConstantRange
+		screenQuadPipeline->mPipelineLayoutInfo.pushConstantRangeCount = 1;
+		screenQuadPipeline->mPipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
+		screenQuadPipeline->build();
+
+		return screenQuadPipeline;
+	}
 
 	void Application::cleanUpSwapChain() {
 		// Release GPU resources
@@ -470,7 +601,10 @@ namespace FF {
 			mNVPMatrices.mProjectionMatrix = mSphereNode->mCamera.getProjectMatrix();
 			mNVPMatrices.mNormalMatrix = glm::transpose(glm::inverse(mNVPMatrices.mViewMatrix));
 
-			mSphereNode->mUniformManager->updateUniformBuffer(mNVPMatrices, mSphereNode->mModels[0]->getUniform(), mCurrentFrame);
+			mCameraParameters.CameraWorldPosition = mSphereNode->mCamera.getCamPosition();
+
+			mSphereNode->mUniformManager->updateUniformBuffer(mNVPMatrices, mSphereNode->mModels[0]->getUniform(), mCameraParameters,mCurrentFrame);
+			mOffscreenSphereNode->mUniformManager->updateUniformBuffer(mNVPMatrices, mOffscreenSphereNode->mModels[0]->getUniform(), mCameraParameters, mCurrentFrame);
 
 			render();
 		}
@@ -486,7 +620,35 @@ namespace FF {
 		}
 		for (size_t i = 0; i < mSwapChain->getImageCount(); i++) {
 			
+			// Render HDR to offscreen render target
+			// Offscreen render pass
+			VkRenderPassBeginInfo offScreenRenderPassBeginInfo{};
+			offScreenRenderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+			offScreenRenderPassBeginInfo.renderPass = mOffscreenRenderTarget->getRenderPass()->getRenderPass();
+			offScreenRenderPassBeginInfo.framebuffer = mOffscreenRenderTarget->getOffScreenFramebuffers()[i];
+			offScreenRenderPassBeginInfo.renderArea.offset = { 0, 0 };
+			offScreenRenderPassBeginInfo.renderArea.extent = mSwapChain->getSwapChainExtent(); // should be consistent with the swap chain extent
+			std::vector<VkClearValue> cvs;
+			//0: final output color attachment 1:multisample image 2: depth attachment
+			VkClearValue offScreenClearFinalColor{};
+			offScreenClearFinalColor.color = { 0.0f, 0.0f, 0.0f, 0.0f };
+			cvs.push_back(offScreenClearFinalColor);
 
+			//1: Multisample image
+			VkClearValue offScreenClearMultiSample{};
+			offScreenClearMultiSample.color = { 0.0f, 0.0f, 0.0f, 0.0f };
+			cvs.push_back(offScreenClearMultiSample);
+
+			//2: Depth attachment
+				VkClearValue offScreenClearDepth{};
+			offScreenClearDepth.depthStencil = { 1.0f, 0 };
+			cvs.push_back(offScreenClearDepth);
+
+			offScreenRenderPassBeginInfo.clearValueCount = static_cast<uint32_t>(cvs.size());
+			offScreenRenderPassBeginInfo.pClearValues = cvs.data();
+
+
+			// swapchain render pass
 			VkRenderPassBeginInfo renderPassBeginInfo{};
 			renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 			renderPassBeginInfo.renderPass = mRenderPass->getRenderPass();
@@ -499,12 +661,12 @@ namespace FF {
 
 			//0: final output color attachment 1:multisample image 2: depth attachment
 			VkClearValue clearFinalColor{};
-			clearFinalColor.color = { 1.0f, 1.0f, 1.0f, 1.0f };
+			clearFinalColor.color = { 0.0f, 0.0f, 0.0f, 0.0f };
 			clearValues.push_back(clearFinalColor);
 
 			//1: Multisample image
 			VkClearValue clearMultiSample{};
-			clearMultiSample.color = { 0.1f, 0.4f, 0.6f, 1.0f };
+			clearMultiSample.color = { 0.0f, 0.0f, 0.0f, 0.0f };
 			clearValues.push_back(clearMultiSample);
 
 			//2: Depth attachment
@@ -515,26 +677,46 @@ namespace FF {
 			renderPassBeginInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
 			renderPassBeginInfo.pClearValues = clearValues.data();
 
+
+			// Begin command buffer
 			mCommandBuffers[i]->beginCommandBuffer();
-			// Begin render pass
+
+			// Begin offscreen render pass
+			mCommandBuffers[i]->beginRenderPass(offScreenRenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+			mCommandBuffers[i]->bindGraphicPipeline(mPipeline);
+			std::vector<VkDescriptorSet> offscreenDescriptorSets = { mOffscreenSphereNode->mUniformManager->getDescriptorSet(mCurrentFrame) , mOffscreenSphereNode->mMaterial->getDescriptorSet(mCurrentFrame) };
+			mCommandBuffers[i]->bindDescriptorSets(mPipeline->getPipelineLayout(), 0, offscreenDescriptorSets.size(), offscreenDescriptorSets.data());
+
+			mCommandBuffers[i]->pushConstants(mPipeline->getPipelineLayout(), mPushConstantManager->getConstantParam().stageFlags,
+			mPushConstantManager->getConstantParam().offset, mPushConstantManager->getConstantParam().size, &mPushConstantManager->getConstantData());
+
+			mOffscreenSphereNode->draw(mCommandBuffers[i]);
+			mCommandBuffers[i]->endRenderPass();
+			// End offscreen render pass
+
+
+
+			// Begin swapchain render pass
 			mCommandBuffers[i]->beginRenderPass(renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 
-			mCommandBuffers[i]->bindGraphicPipeline(mPipeline);
+			mCommandBuffers[i]->bindGraphicPipeline(mScreenQuadPipeline);
 
 			std::vector<VkDescriptorSet> descriptorSets = { mSphereNode->mUniformManager->getDescriptorSet(mCurrentFrame) , mSphereNode->mMaterial->getDescriptorSet(mCurrentFrame) };
-			mCommandBuffers[i]->bindDescriptorSets(mPipeline->getPipelineLayout(), 0, descriptorSets.size(), descriptorSets.data());
+			mCommandBuffers[i]->bindDescriptorSets(mScreenQuadPipeline->getPipelineLayout(), 0, descriptorSets.size(), descriptorSets.data());
 
 
-			mCommandBuffers[i]->pushConstants(mPipeline->getPipelineLayout(), mPushConstantManager->getConstantParam().stageFlags,
+			mCommandBuffers[i]->pushConstants(mScreenQuadPipeline->getPipelineLayout(), mPushConstantManager->getConstantParam().stageFlags,
 			mPushConstantManager->getConstantParam().offset, mPushConstantManager->getConstantParam().size, &mPushConstantManager->getConstantData());
 
 
 
 			//mModel->draw(mCommandBuffers[i]);
-			mSphereNode->draw(mCommandBuffers[i]);
-
+			vkCmdDraw(mCommandBuffers[i]->getCommandBuffer(), 3, 1, 0, 0);
+			// End swapchain render pass
 			mCommandBuffers[i]->endRenderPass();
+
+
 			mCommandBuffers[i]->endCommandBuffer();
 		}
 	}

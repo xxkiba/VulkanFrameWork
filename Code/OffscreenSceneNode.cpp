@@ -20,13 +20,13 @@ namespace FF {
         return mFragmentShaderFile;
     }
 
-    const std::vector<VkVertexInputBindingDescription>& OffscreenSceneNode::getVertexInputBindingDescriptions() const {
+    const std::vector<VkVertexInputBindingDescription> OffscreenSceneNode::getVertexInputBindingDescriptions() const {
 		if (mModels.empty()) {
 			throw std::runtime_error("No models available to get vertex input binding descriptions.");
 		}
         return mModels[0]->getVertexInputBindingDescriptions();
     }
-    const std::vector<VkVertexInputAttributeDescription>& OffscreenSceneNode::getVertexInputAttributeDescriptions() const {
+    const std::vector<VkVertexInputAttributeDescription> OffscreenSceneNode::getVertexInputAttributeDescriptions() const {
 		if (mModels.empty()) {
 			throw std::runtime_error("No models available to get vertex input attribute descriptions.");
 		}

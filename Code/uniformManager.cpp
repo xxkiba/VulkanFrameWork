@@ -46,8 +46,27 @@ void UniformManager::init(const Wrapper::Device::Ptr& device, const Wrapper::Com
 		"assets/py.jpg","assets/ny.jpg",
 		"assets/pz.jpg","assets/nz.jpg"
 	};
-	textureParam->mTextures = { Texture::create(mDevice, mcommandpool, cubemapPaths) };
+	textureParam->mTextures.resize(frameCount); // Resize to frameCount, each frame will have its own textures
+	for (int i = 0; i < frameCount; i++) {
+		auto tex = Texture::create(mDevice, mcommandpool, cubemapPaths);
+			textureParam->mTextures[i].push_back(tex);
+	}
 	mUniformParameters.push_back(textureParam);
+
+
+	auto cameraParam = Wrapper::UniformParameter::create();
+	cameraParam->mBinding = 3;
+	cameraParam->mDescriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	cameraParam->mCount = 1;
+	cameraParam->mStageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+	cameraParam->mSize = sizeof(cameraParameters);
+
+	for (int i = 0; i < frameCount; i++) {
+		auto buffer = Wrapper::Buffer::createUniformBuffer(device, cameraParam->mSize, nullptr);
+		cameraParam->mBuffers.push_back(buffer);
+	}
+
+	mUniformParameters.push_back(cameraParam);
 
 
 
@@ -60,7 +79,9 @@ void UniformManager::init(const Wrapper::Device::Ptr& device, const Wrapper::Com
 	mDescriptorSet = Wrapper::DescriptorSet::create(device,mUniformParameters,mDescriptorLayout,mDescriptorPool,frameCount);
 
 }
-void UniformManager::updateUniformBuffer(const NVPMatrices& vpMatrices, const ObjectUniform& objectUniform,const int frameCount) {
+void UniformManager::updateUniformBuffer(const NVPMatrices& vpMatrices, const ObjectUniform& objectUniform, const cameraParameters& cameraParams, const int frameCount) {
 	mUniformParameters[0]->mBuffers[frameCount]->updateBufferByMap(reinterpret_cast<const void*>(&vpMatrices), sizeof(NVPMatrices));
 	mUniformParameters[1]->mBuffers[frameCount]->updateBufferByMap(reinterpret_cast<const void*>(&objectUniform), sizeof(ObjectUniform));
+
+	mUniformParameters[3]->mBuffers[frameCount]->updateBufferByMap(reinterpret_cast<const void*>(&cameraParams), sizeof(cameraParameters));
 }

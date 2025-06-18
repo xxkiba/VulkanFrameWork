@@ -165,6 +165,26 @@ namespace FF {
         mImageInfo.sampler = mSampler->getSampler();
     }
 
+    Texture::Texture(
+        const Wrapper::Device::Ptr& device,
+        const Wrapper::Image::Ptr& image,
+        const Wrapper::Sampler::Ptr& sampler)
+        : mDevice(device), mImage(image)
+    {
+        // Existing image
+        if (!mImage) {
+            throw std::runtime_error("Error: Wrapper::Image::Ptr must not be nullptr!");
+        }
+
+        mSampler = sampler ? sampler : Wrapper::Sampler::create(mDevice);
+
+
+        mImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL; // 常用layout
+        mImageInfo.imageView = mImage->getImageView(); // 获取 image view
+        mImageInfo.sampler = mSampler->getSampler();
+    }
+
+
 	Texture::~Texture() {
 		if (mSampler != nullptr) {
 			mSampler.reset();

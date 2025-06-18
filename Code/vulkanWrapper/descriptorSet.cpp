@@ -33,7 +33,7 @@ namespace FF::Wrapper {
 					// For combined image sampler, we need to create a vector of VkDescriptorImageInfo
 					std::vector<VkDescriptorImageInfo> infos(param->mCount);
 					for (size_t j = 0; j < param->mCount; ++j) {
-						infos[j] = param->mTextures[j]->getImageInfo();
+						infos[j] = param->mTextures[i][j]->getImageInfo();
 					}
 					imageInfoArrays.push_back(std::move(infos));// Need to ensure infos live until the end of vkUpdateDescriptorSets
 					descriptorWrite.pImageInfo = imageInfoArrays.back().data();

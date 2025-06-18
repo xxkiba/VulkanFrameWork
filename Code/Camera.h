@@ -50,8 +50,10 @@ public:
 	{
 
 	}
-	void lookAt(glm::vec3 _pos , glm::vec3 _front , glm::vec3 _up );
+	void lookAt(glm::vec3 _pos , glm::vec3 _target , glm::vec3 _up );
 	void update();
+
+	glm::vec4 getCamPosition();
 
 	glm::mat4 getViewMatrix();
 

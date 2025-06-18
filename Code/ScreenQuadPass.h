@@ -36,7 +36,7 @@ namespace FF {
         void build();
 
 		// begin rendering
-        void render(const Wrapper::CommandBuffer::Ptr& cmdBuf);
+		void render(const Wrapper::CommandBuffer::Ptr& cmdBuf, const Wrapper::RenderPass::Ptr& renderPass, VkFramebuffer& frameBuffer);
 
         
         Wrapper::Pipeline::Ptr getPipeline() const { return mPipeline; }

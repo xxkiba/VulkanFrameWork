@@ -19,8 +19,8 @@ namespace FF {
         const std::string& getFragmentShaderFile() const;
 
 		// get vertex input binding and attribute descriptions, by default from the first model
-        const std::vector<VkVertexInputBindingDescription>& getVertexInputBindingDescriptions() const;
-        const std::vector<VkVertexInputAttributeDescription>& getVertexInputAttributeDescriptions() const;
+        const std::vector<VkVertexInputBindingDescription> getVertexInputBindingDescriptions() const;
+        const std::vector<VkVertexInputAttributeDescription> getVertexInputAttributeDescriptions() const;
 
 		// get descriptor set layouts from material
         std::vector<VkDescriptorSetLayout> getDescriptorSetLayouts() const;
@@ -28,5 +28,7 @@ namespace FF {
     private:
         std::string mVertexShaderFile;
         std::string mFragmentShaderFile;
+		std::vector<VkVertexInputBindingDescription> mVertexInputBindingDescriptions;
+		std::vector<VkVertexInputAttributeDescription> mVertexInputAttributeDescriptions;
     };
 }

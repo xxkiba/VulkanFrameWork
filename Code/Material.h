@@ -19,8 +19,13 @@ namespace FF {
 
         void init(const Wrapper::Device::Ptr& device,
             const Wrapper::CommandPool::Ptr& commandPool,
-            std::vector<std::string> texturePaths,
             int frameCount);
+
+        void attachTexturePath(const std::string& path);
+
+        void attachTexturePaths(const std::vector<std::string>& paths);
+
+        void attachImages(const std::vector<Wrapper::Image::Ptr>& perFrameImages);
 
         [[nodiscard]] auto getDescriptorLayout() const {
             return mDescriptorLayout;
@@ -33,7 +38,10 @@ namespace FF {
         }
 
     private:
-        std::vector<Texture::Ptr> mTextures{ nullptr };
+		std::vector<std::string> mTexturePaths; // strings used to create textures
+		std::vector<Wrapper::Image::Ptr> mAttachedImages; // Images used to create textures
+        std::vector<std::vector<Wrapper::Image::Ptr>> mAttachedImagesPerFrame;
+        std::vector<Texture::Ptr> mTextures;
         Wrapper::DescriptorSetLayout::Ptr mDescriptorLayout{ nullptr };
         Wrapper::DescriptorPool::Ptr mDescriptorPool{ nullptr };
         Wrapper::DescriptorSet::Ptr mDescriptorSet{ nullptr };

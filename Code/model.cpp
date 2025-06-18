@@ -249,7 +249,7 @@ namespace FF {
 			// If there are submeshes, draw each submesh
 			for (const auto& subMesh : mSubMeshes) {
 				cmdBuf->bindIndexBuffer(subMesh.second->mSubMeshIndexBuffer->getBuffer(), 0, VK_INDEX_TYPE_UINT32);
-				cmdBuf->drawIndexed(subMesh.second->mIndexCount, 3, 0, 0, 0);
+				cmdBuf->drawIndexed(subMesh.second->mIndexCount, 1, 0, 0, 0);
 			}
 		}
 		else {

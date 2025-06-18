@@ -1,9 +1,9 @@
 #include "Camera.h"
 
-void Camera::lookAt(glm::vec3 _pos, glm::vec3 _front, glm::vec3 _up)
+void Camera::lookAt(glm::vec3 _pos, glm::vec3 _target, glm::vec3 _up)
 {
 	m_position = _pos;
-	m_front = glm::normalize(_front - _pos);
+	m_front = glm::normalize(_target - _pos);
 
 	
 	glm::vec3 right = glm::normalize(glm::cross(m_front, _up));
@@ -15,6 +15,11 @@ void Camera::lookAt(glm::vec3 _pos, glm::vec3 _front, glm::vec3 _up)
 void Camera::update()
 {
 	m_vMatrix = glm::lookAt(m_position, m_position + m_front, m_up);
+}
+
+glm::vec4 Camera::getCamPosition()
+{
+	return glm::vec4(m_position, 1.0f);
 }
 
 glm::mat4 Camera::getViewMatrix()
@@ -93,20 +98,20 @@ void Camera::setPerpective(float angle, float ratio, float near, float far) {
 
 void Camera::onMouseMove(double _xpos, double _ypos)
 {
-	if (m_firstMove)
-	{
-		m_xpos = _xpos;
-		m_ypos = _ypos;
-		m_firstMove = false;
-		return;
-	}
+	//if (m_firstMove)
+	//{
+	//	m_xpos = _xpos;
+	//	m_ypos = _ypos;
+	//	m_firstMove = false;
+	//	return;
+	//}
 
-	float _xOffset = _xpos - m_xpos;
-	float _yOffset = -(_ypos - m_ypos);
+	//float _xOffset = _xpos - m_xpos;
+	//float _yOffset = -(_ypos - m_ypos);
 
-	m_xpos = _xpos;
-	m_ypos = _ypos;
+	//m_xpos = _xpos;
+	//m_ypos = _ypos;
 
-	pitch(_yOffset);
-	yaw(_xOffset);
+	//pitch(_yOffset);
+	//yaw(_xOffset);
 }
