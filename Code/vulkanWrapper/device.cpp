@@ -160,6 +160,12 @@ namespace FF::Wrapper {
 		VkPhysicalDeviceFeatures deviceFeatures = {};
 		deviceFeatures.samplerAnisotropy = VK_TRUE; // Enable anisotropic filtering
 
+
+		VkPhysicalDeviceNonSeamlessCubeMapFeaturesEXT nonSeamlessCubeMapFeatures = {};
+		nonSeamlessCubeMapFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_NON_SEAMLESS_CUBE_MAP_FEATURES_EXT;
+		nonSeamlessCubeMapFeatures.nonSeamlessCubeMap = VK_TRUE;
+
+
 		//Logical Device Create Info
 		VkDeviceCreateInfo deviceCreateInfo = {};
 		deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -167,8 +173,10 @@ namespace FF::Wrapper {
 		deviceCreateInfo.pQueueCreateInfos = queueCreateInfos.data();
 
 		deviceCreateInfo.pEnabledFeatures = &deviceFeatures;
+
 		deviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(deviceRequiredExtensions.size());
 		deviceCreateInfo.ppEnabledExtensionNames = deviceRequiredExtensions.data();
+		deviceCreateInfo.pNext = &nonSeamlessCubeMapFeatures; // Add non-seamless cube map features
 
 		//Layer
 		if (mInstance->getEnableValidationLayer()) {

@@ -7,12 +7,13 @@ namespace FF {
         uint32_t width, uint32_t height,
         uint32_t imageCount,
         VkFormat colorFormat,
-        VkFormat depthFormat)
+        VkFormat depthFormat,
+        VkImageLayout renderTargetFinalLayout)
 		: mDevice(device), mCommandPool(commandPool), mWidth(width), mHeight(height), mImageCount(imageCount),
          mColorFormat(colorFormat), mDepthFormat(depthFormat)
     {
         createImageEntities();
-        createRenderPass();
+        createRenderPass(renderTargetFinalLayout);
         createFramebuffer();
     }
 
@@ -63,7 +64,7 @@ namespace FF {
 				mWidth, mHeight,
 				mColorFormat,
 				VK_IMAGE_TYPE_2D, VK_IMAGE_TILING_OPTIMAL,
-				VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+				VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
 				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 				VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_ASPECT_COLOR_BIT);
 
@@ -103,7 +104,7 @@ namespace FF {
     }
 
 
-    void OffscreenRenderTarget::createRenderPass() {
+    void OffscreenRenderTarget::createRenderPass(VkImageLayout renderTargetFinalLayout) {
         mRenderPass = Wrapper::RenderPass::create(mDevice);
 		// Create a render pass for the offscreen render target
         // 
@@ -121,7 +122,7 @@ namespace FF {
         finalAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
         finalAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
         finalAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-		finalAttachment.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL; // The final layout of the final attachment is shader read only optimal, which is suitable for sampling in shaders
+		finalAttachment.finalLayout = renderTargetFinalLayout; // The final layout of the final attachment, by default is VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
         mRenderPass->addAttachment(finalAttachment);
 
 		// Description of indexes and format of the attachments before enter subpass

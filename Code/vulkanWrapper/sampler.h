@@ -12,13 +12,13 @@ namespace FF::Wrapper {
 	class Sampler {
 	public:
 		using Ptr = std::shared_ptr<Sampler>;
-		static Ptr create(const Device::Ptr& device) {
-			return std::make_shared<Sampler>(device);
+		static Ptr create(const Device::Ptr& device,bool isCubeMap = false) {
+			return std::make_shared<Sampler>(device,isCubeMap);
 		}
-		Sampler(const Device::Ptr& device);
+		Sampler(const Device::Ptr& device,bool isCubeMap = false);
 		~Sampler();
 
-		void createSampler(VkFilter magFilter, VkFilter minFilter, VkSamplerAddressMode addressMode);
+		void createSampler(VkFilter magFilter, VkFilter minFilter, VkSamplerAddressMode addressMode, bool isCubeMap = false);
 		[[nodiscard]] VkSampler getSampler() const { return mSampler; }
 	private:
 		VkSampler mSampler{ VK_NULL_HANDLE };

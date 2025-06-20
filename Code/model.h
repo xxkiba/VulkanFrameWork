@@ -29,6 +29,11 @@ namespace FF {
 		glm::vec4 mTangent;
 	};
 
+	struct BattleFireComponentVertexData {
+		glm::vec4  mPosition;
+		glm::vec4  mTexcoord;
+		glm::vec4  mNormal;
+	};
 
 	struct SubMesh {
 		std::vector<uint32_t> mSubMeshIndices{};
@@ -51,6 +56,7 @@ namespace FF {
 
 		void loadModel(const std::string& path, const Wrapper::Device::Ptr& device);
 		void loadBattleFireModel(const std::string& path, const Wrapper::Device::Ptr& device);
+		void loadBattleFireComponent(const std::string& path, const Wrapper::Device::Ptr& device);
 
 		void setVertexInputBindingDescriptions();
 
@@ -113,6 +119,7 @@ namespace FF {
 
 		std::vector<StaticMeshVertexData> mVertexDatas{};
 		std::vector< BattleFireMeshVertexData> mBattleFireVertexDatas{};
+		std::vector< BattleFireComponentVertexData> mBattleFireComponentVertexDatas{};
 
 		Wrapper::Buffer::Ptr mVertexDataBuffer{ nullptr };
 

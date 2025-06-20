@@ -18,7 +18,8 @@ namespace FF {
         const std::vector<VkVertexInputBindingDescription>& bindingDes,
         const std::vector<VkVertexInputAttributeDescription>& attributeDes,
         const std::vector<VkPushConstantRange>* pushConstantRanges,
-        VkSampleCountFlagBits sampleCount)
+        VkSampleCountFlagBits sampleCount,
+        VkFrontFace inFrontFace)
     {
         mWidth = width;
         mHeight = height;
@@ -74,7 +75,7 @@ namespace FF {
         mPipeline->mRasterState.polygonMode = VK_POLYGON_MODE_FILL;
         mPipeline->mRasterState.lineWidth = 1.0f;
         mPipeline->mRasterState.cullMode = VK_CULL_MODE_BACK_BIT;
-        mPipeline->mRasterState.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+        mPipeline->mRasterState.frontFace = inFrontFace;
         mPipeline->mRasterState.rasterizerDiscardEnable = VK_FALSE;
         mPipeline->mRasterState.depthClampEnable = VK_FALSE;
         mPipeline->mRasterState.depthBiasEnable = VK_FALSE;
@@ -89,7 +90,7 @@ namespace FF {
 
         mPipeline->mDepthStencilState.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
         mPipeline->mDepthStencilState.depthTestEnable = VK_TRUE;
-        mPipeline->mDepthStencilState.depthWriteEnable = VK_TRUE;
+        mPipeline->mDepthStencilState.depthWriteEnable = VK_FALSE;
         mPipeline->mDepthStencilState.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
         mPipeline->mDepthStencilState.depthBoundsTestEnable = VK_FALSE;
         mPipeline->mDepthStencilState.stencilTestEnable = VK_FALSE;

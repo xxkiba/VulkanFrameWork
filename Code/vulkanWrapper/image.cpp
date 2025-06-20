@@ -147,7 +147,8 @@ namespace FF::Wrapper {
 		VkPipelineStageFlags srcStageMask,
 		VkPipelineStageFlags dstStageMask,
 		VkImageSubresourceRange subresourceRange,
-		const CommandPool::Ptr& commandPool) {
+		const CommandPool::Ptr& commandPool,
+		const CommandBuffer::Ptr& inCommandBUffer) {
 
 		
 		VkImageMemoryBarrier barrier{};
@@ -165,6 +166,9 @@ namespace FF::Wrapper {
 			break;
 		case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
 			barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+			break;
+		case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
+			barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
 			break;
 		default:
 			break;
@@ -196,12 +200,18 @@ namespace FF::Wrapper {
 		}
 		
 
-		auto commandBuffer = CommandBuffer::create(mDevice, commandPool);
-		commandBuffer->beginCommandBuffer(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
-		commandBuffer->transferImageLayout(barrier, srcStageMask, dstStageMask);
-		commandBuffer->endCommandBuffer();
+		if (inCommandBUffer == nullptr) {
+			auto commandBuffer = CommandBuffer::create(mDevice, commandPool);
+			commandBuffer->beginCommandBuffer(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+			commandBuffer->transferImageLayout(barrier, srcStageMask, dstStageMask);
+			commandBuffer->endCommandBuffer();
 
-		commandBuffer->submitCommandBuffer(mDevice->getGraphicQueue());
+			commandBuffer->submitCommandBuffer(mDevice->getGraphicQueue());
+		}
+		else {
+			inCommandBUffer->transferImageLayout(barrier, srcStageMask, dstStageMask);
+		}
+
 		//commandBuffer->waitCommandBuffer(mDevice->getGraphicQueue());
 		mImageLayout = newLayout;
 	}
@@ -220,6 +230,15 @@ namespace FF::Wrapper {
 		commandBuffer->submitCommandBuffer(mDevice->getGraphicQueue());
 		//commandBuffer->waitCommandBuffer(mDevice->getGraphicQueue());
 
+	}
+
+	void Image::CopyImageToCubeMap(const CommandPool::Ptr& commandPool, const VkImage& inSrcImage,VkImage inDstCubeMap, size_t inWidth, size_t inHeight, int inFace, int inMipmapLevel) {
+		auto commandBuffer = CommandBuffer::create(mDevice, commandPool);
+		commandBuffer->beginCommandBuffer(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+		commandBuffer->CopyRTImageToCubeMap(inSrcImage, inDstCubeMap, inWidth, inHeight, inFace, inMipmapLevel);
+		commandBuffer->endCommandBuffer();
+		commandBuffer->submitCommandBuffer(mDevice->getGraphicQueue());
+		
 	}
 
 	void Image::destroyImageView() {

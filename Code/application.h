@@ -22,13 +22,15 @@
 #include "vulkanWrapper/constantRange.h"
 
 #include "offscreenRender/offscreenRenderTarget.h"
+#include "offscreenRender/OffscreenSceneNode.h"
+#include "offscreenRender/offscreenPipeline.h"
+#include "texture/HDRI.h"
 
 #include "texture/texture.h"
 #include "uniformManager.h"
 #include "pushConstantManager.h"
 #include "Camera.h"
 #include "SceneNode.h"
-#include "OffscreenSceneNode.h"
 #include "model.h"
 namespace FF {
 
@@ -107,6 +109,9 @@ namespace FF {
 		cameraParameters mCameraParameters{};
 		SceneNode::Ptr mSphereNode{ nullptr };
 		OffscreenSceneNode::Ptr mOffscreenSphereNode{ nullptr };
+		OffscreenSceneNode::Ptr mSkyBoxNode{ nullptr };
+
+		OffscreenPipeline::Ptr mSkyBoxPipeline{ nullptr };
 
 		OffscreenRenderTarget::Ptr mOffscreenRenderTarget{ nullptr };
 

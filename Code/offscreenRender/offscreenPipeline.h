@@ -25,7 +25,8 @@ namespace FF {
             const std::vector<VkVertexInputBindingDescription>& bindingDes,
             const std::vector<VkVertexInputAttributeDescription>& attributeDes,
             const std::vector<VkPushConstantRange>* pushConstantRanges = nullptr,
-            VkSampleCountFlagBits sampleCount = VK_SAMPLE_COUNT_1_BIT
+            VkSampleCountFlagBits sampleCount = VK_SAMPLE_COUNT_1_BIT,
+			VkFrontFace inFrontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE
         );
 
         Wrapper::Pipeline::Ptr getPipeline() const { return mPipeline; }

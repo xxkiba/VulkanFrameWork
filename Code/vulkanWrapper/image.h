@@ -102,10 +102,11 @@ namespace FF::Wrapper {
 			VkPipelineStageFlags srcStageMask,
 			VkPipelineStageFlags dstStageMask,
 			VkImageSubresourceRange subresourceRange,
-			const CommandPool::Ptr& commandPool);
+			const CommandPool::Ptr& commandPool,
+			const CommandBuffer::Ptr& commandBUffer = nullptr);
 
 		void fillImageData(size_t size, const void* pData, const CommandPool::Ptr& commandPool,const bool& isCubeMap = false);
-
+		void CopyImageToCubeMap(const CommandPool::Ptr& commandPool, const VkImage& inSrcImage, VkImage inDstCubeMap, size_t inWidth, size_t inHeight, int inFace, int inMipmapLevel);
 	private:
 		uint32_t findMemoryType(Device::Ptr device, uint32_t typeFilter, VkMemoryPropertyFlags properties);
 

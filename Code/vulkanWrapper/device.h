@@ -8,7 +8,8 @@ namespace FF::Wrapper {
 
 	const std::vector<const char*> deviceRequiredExtensions = {
 		VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-		VK_KHR_MAINTENANCE_1_EXTENSION_NAME
+		VK_KHR_MAINTENANCE_1_EXTENSION_NAME,
+		VK_EXT_NON_SEAMLESS_CUBE_MAP_EXTENSION_NAME
 	};
 
 	class Device {

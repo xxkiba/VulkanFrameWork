@@ -9,6 +9,7 @@ UniformManager::~UniformManager() {
 void UniformManager::init(const Wrapper::Device::Ptr& device, const Wrapper::CommandPool::Ptr& commandPool, int frameCount) {
 	mDevice = device;
 	mcommandpool = commandPool;
+	mFrameCount = frameCount;
 	auto nvpParam = Wrapper::UniformParameter::create();
 	nvpParam->mBinding = 0;
 	nvpParam->mDescriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -68,16 +69,33 @@ void UniformManager::init(const Wrapper::Device::Ptr& device, const Wrapper::Com
 
 	mUniformParameters.push_back(cameraParam);
 
+}
 
+void UniformManager::attachCubeMap(Wrapper::Image::Ptr& inImage) {
+	auto textureParam = Wrapper::UniformParameter::create();
+	textureParam->mBinding = mUniformParameters.size(); // Use the next binding index
+	textureParam->mDescriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	textureParam->mCount = 1;
+	textureParam->mStageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+	auto cubeSampler = Wrapper::Sampler::create(mDevice, true);
 
-	mDescriptorLayout = Wrapper::DescriptorSetLayout::create(device);
+	textureParam->mTextures.resize(mFrameCount); // Resize to frameCount, each frame will have its own textures
+	for (int i = 0; i < mFrameCount; i++) {
+
+		auto tex = Texture::createFromImage(mDevice, inImage, cubeSampler);
+		textureParam->mTextures[i].push_back(tex);
+	}
+	mUniformParameters.push_back(textureParam);
+}
+
+void UniformManager::build() {
+	mDescriptorLayout = Wrapper::DescriptorSetLayout::create(mDevice);
 	mDescriptorLayout->build(mUniformParameters);
 
-	mDescriptorPool = Wrapper::DescriptorPool::create(device);
-	mDescriptorPool->build(mUniformParameters, frameCount);
+	mDescriptorPool = Wrapper::DescriptorPool::create(mDevice);
+	mDescriptorPool->build(mUniformParameters, mFrameCount);
 
-	mDescriptorSet = Wrapper::DescriptorSet::create(device,mUniformParameters,mDescriptorLayout,mDescriptorPool,frameCount);
-
+	mDescriptorSet = Wrapper::DescriptorSet::create(mDevice, mUniformParameters, mDescriptorLayout, mDescriptorPool, mFrameCount);
 }
 void UniformManager::updateUniformBuffer(const NVPMatrices& vpMatrices, const ObjectUniform& objectUniform, const cameraParameters& cameraParams, const int frameCount) {
 	mUniformParameters[0]->mBuffers[frameCount]->updateBufferByMap(reinterpret_cast<const void*>(&vpMatrices), sizeof(NVPMatrices));

@@ -16,8 +16,9 @@ namespace FF {
             uint32_t width, uint32_t height,
             uint32_t imageCount,
             VkFormat colorFormat = VK_FORMAT_R32G32B32A32_SFLOAT,
-            VkFormat depthFormat = VK_FORMAT_D32_SFLOAT) {
-			return std::make_shared<OffscreenRenderTarget>(device, commandPool, width, height, imageCount, colorFormat, depthFormat);
+            VkFormat depthFormat = VK_FORMAT_D32_SFLOAT,
+            VkImageLayout renderTargetFinalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
+			return std::make_shared<OffscreenRenderTarget>(device, commandPool, width, height, imageCount, colorFormat, depthFormat, renderTargetFinalLayout);
         }
 
         OffscreenRenderTarget(const Wrapper::Device::Ptr& device,
@@ -25,7 +26,8 @@ namespace FF {
             uint32_t width, uint32_t height,
 			uint32_t imageCount,
             VkFormat colorFormat,
-            VkFormat depthFormat);
+            VkFormat depthFormat,
+            VkImageLayout renderTargetFinalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
         ~OffscreenRenderTarget();
     public:
@@ -50,7 +52,7 @@ namespace FF {
 
     private:
 		void createImageEntities();
-        void createRenderPass();
+		void createRenderPass(VkImageLayout renderTargetFinalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
         void createFramebuffer();
         void cleanup();
 

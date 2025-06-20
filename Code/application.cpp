@@ -1,6 +1,4 @@
 #include "application.h"
-#include "vulkanWrapper/image.h"
-
 
 namespace FF {
 
@@ -14,11 +12,13 @@ namespace FF {
 	void Application::onMouseMove(double xpos, double ypos) {
 		mSphereNode->mCamera.onMouseMove(xpos, ypos);
 		mOffscreenSphereNode->mCamera.onMouseMove(xpos, ypos);
+		mSkyBoxNode->mCamera.onMouseMove(xpos, ypos);
 	}
 
 	void Application::onKeyPress(CAMERA_MOVE moveDirection) {
 		mSphereNode->mCamera.move(moveDirection);
 		mOffscreenSphereNode->mCamera.move(moveDirection);
+		mSkyBoxNode->mCamera.move(moveDirection);
 	}
 
 	void Application::initWindow() {
@@ -28,16 +28,22 @@ namespace FF {
 
 		mSphereNode = SceneNode::create();
 		mOffscreenSphereNode = OffscreenSceneNode::create();
+		mSkyBoxNode = OffscreenSceneNode::create();
 
 		mSphereNode->mCamera.lookAt(glm::vec3(0.0f, 0.0f, 5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 		mOffscreenSphereNode->mCamera.lookAt(glm::vec3(0.0f, 0.0f, 5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		/* SkyBox Node Should be in the center */
+		mSkyBoxNode->mCamera.lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 5.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		// 
 		//mSphereNode->mCamera.update();
 
 		mSphereNode->mCamera.setPerpective(60.0f, static_cast<float>(mWidth) / static_cast<float>(mHeight), 0.1f, 100.0f);
 		mOffscreenSphereNode->mCamera.setPerpective(60.0f, static_cast<float>(mWidth) / static_cast<float>(mHeight), 0.1f, 100.0f);
+		mSkyBoxNode->mCamera.setPerpective(60.0f, static_cast<float>(mWidth) / static_cast<float>(mHeight), 0.1f, 100.0f);
 
 		mSphereNode->mCamera.setSpeed(0.001f);
 		mOffscreenSphereNode->mCamera.setSpeed(0.001f);
+		mSkyBoxNode->mCamera.setSpeed(0.001f);
 	}
 
 	void Application::initVulkan() {
@@ -66,10 +72,27 @@ namespace FF {
 		);
 
 		
+		HDRI::Ptr hdri = HDRI::create(mDevice, mCommandPool);
+		Wrapper::Image::Ptr HDRICubemap = hdri->LoadHDRICubeMapFromFile(
+			mDevice, mCommandPool,
+			"assets/1.hdr",
+			512, 512,
+			"shaders/HDRI2CubemapVert.spv", "shaders/HDRI2CubemapFrag.spv"
+		);
+
 		mSphereNode->mUniformManager = UniformManager::create();
 		mSphereNode->mUniformManager->init(mDevice,mCommandPool, mSwapChain->getImageCount());
+		mSphereNode->mUniformManager->build();
+
+		mSkyBoxNode->mUniformManager = UniformManager::create();
+		mSkyBoxNode->mUniformManager->init(mDevice, mCommandPool, mSwapChain->getImageCount());
+		mSkyBoxNode->mUniformManager->attachCubeMap(HDRICubemap);
+		mSkyBoxNode->mUniformManager->build();
+
+
 		mOffscreenSphereNode->mUniformManager = UniformManager::create();
 		mOffscreenSphereNode->mUniformManager->init(mDevice, mCommandPool, mSwapChain->getImageCount());
+		mOffscreenSphereNode->mUniformManager->build();
 
 
 		
@@ -78,17 +101,18 @@ namespace FF {
 		textureFiles.push_back("assets/diffuse.jpg");
 		textureFiles.push_back("assets/metal.jpg");
 
+
+
 		mOffscreenSphereNode->mMaterial = Material::create();
 		mOffscreenSphereNode->mMaterial->attachTexturePaths(textureFiles);
 		mOffscreenSphereNode->mMaterial->init(mDevice, mCommandPool, mSwapChain->getImageCount());
 
 		mSphereNode->mMaterial = Material::create();
-		mSphereNode->mMaterial->attachTexturePaths(textureFiles);
+		//mSphereNode->mMaterial->attachTexturePaths(textureFiles);
 		mSphereNode->mMaterial->attachImages(mOffscreenRenderTarget->getRenderTargetImages()); // Attach the offscreen render target images to the material
 		mSphereNode->mMaterial->init(mDevice, mCommandPool,mSwapChain->getImageCount());
 
-
-
+		//No material for the skybox, just use the cubemap texture
 
 
 
@@ -98,6 +122,7 @@ namespace FF {
 		// Create a model
 		Model::Ptr commonModel = Model::create(mDevice);
 		Model::Ptr offscreenModel = Model::create(mDevice);
+		Model::Ptr skyboxModel = Model::create(mDevice);
 		if (useBattleFirePipeline) {
 			commonModel->loadBattleFireModel("assets/Sphere.rhsm", mDevice);
 			mSphereNode->mModels.push_back(commonModel);
@@ -106,6 +131,10 @@ namespace FF {
 			offscreenModel->loadBattleFireModel("assets/Sphere.rhsm", mDevice);
 			mOffscreenSphereNode->mModels.push_back(offscreenModel);
 			mOffscreenSphereNode->mModels[0]->setModelMatrix(glm::mat4(1.0f));
+
+			skyboxModel->loadBattleFireComponent("assets/skybox.staticmesh", mDevice);
+			mSkyBoxNode->mModels.push_back(skyboxModel);
+			mSkyBoxNode->mModels[0]->setModelMatrix(glm::mat4(1.0f));
 
 			mPipeline = createPipeline("shaders/testVs.spv", "shaders/testFs.spv");
 		}
@@ -121,7 +150,18 @@ namespace FF {
 			mPipeline = createPipeline("shaders/vs.spv","shaders/fs.spv");
 		}
 		mScreenQuadPipeline = createScreenQuadPipeline(mRenderPass);
-
+		mSkyBoxPipeline = OffscreenPipeline::create(mDevice);
+		mSkyBoxPipeline->build(
+			mOffscreenRenderTarget->getRenderPass(),
+			mWidth, mHeight,
+			"shaders/SkyboxVert.spv", "shaders/SkyBoxFrag.spv",
+			{ mSkyBoxNode->mUniformManager->getDescriptorLayout()->getLayout() },
+			mSkyBoxNode->mModels[0]->getVertexInputBindingDescriptions(),
+			mSkyBoxNode->mModels[0]->getAttributeDescriptions(),
+			nullptr, // No push constants
+			mDevice->getMaxUsableSampleCount(),
+			VK_FRONT_FACE_CLOCKWISE
+		);
 
 		createCommandBuffers();
 
@@ -336,7 +376,7 @@ namespace FF {
 		screenQuadPipeline->mRasterState.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
 		screenQuadPipeline->mRasterState.polygonMode = VK_POLYGON_MODE_FILL;
 		screenQuadPipeline->mRasterState.lineWidth = 1.0f;
-		screenQuadPipeline->mRasterState.cullMode = VK_CULL_MODE_BACK_BIT; // No culling for full screen quad
+		screenQuadPipeline->mRasterState.cullMode = VK_CULL_MODE_BACK_BIT; 
 		screenQuadPipeline->mRasterState.frontFace = VK_FRONT_FACE_CLOCKWISE;
 		screenQuadPipeline->mRasterState.rasterizerDiscardEnable = VK_FALSE;
 
@@ -600,11 +640,21 @@ namespace FF {
 			mNVPMatrices.mViewMatrix = mSphereNode->mCamera.getViewMatrix();
 			mNVPMatrices.mProjectionMatrix = mSphereNode->mCamera.getProjectMatrix();
 			mNVPMatrices.mNormalMatrix = glm::transpose(glm::inverse(mNVPMatrices.mViewMatrix));
-
 			mCameraParameters.CameraWorldPosition = mSphereNode->mCamera.getCamPosition();
+
 
 			mSphereNode->mUniformManager->updateUniformBuffer(mNVPMatrices, mSphereNode->mModels[0]->getUniform(), mCameraParameters,mCurrentFrame);
 			mOffscreenSphereNode->mUniformManager->updateUniformBuffer(mNVPMatrices, mOffscreenSphereNode->mModels[0]->getUniform(), mCameraParameters, mCurrentFrame);
+
+
+			// Skybox node should always in the center of object
+			mNVPMatrices.mViewMatrix = mSkyBoxNode->mCamera.getViewMatrix();
+			mNVPMatrices.mProjectionMatrix = mSkyBoxNode->mCamera.getProjectMatrix();
+			mNVPMatrices.mNormalMatrix = glm::transpose(glm::inverse(mNVPMatrices.mViewMatrix));
+			mCameraParameters.CameraWorldPosition = mSkyBoxNode->mCamera.getCamPosition();
+
+			mSkyBoxNode->mUniformManager->updateUniformBuffer(mNVPMatrices, mSkyBoxNode->mModels[0]->getUniform(), mCameraParameters, mCurrentFrame);
+
 
 			render();
 		}
@@ -683,6 +733,15 @@ namespace FF {
 
 			// Begin offscreen render pass
 			mCommandBuffers[i]->beginRenderPass(offScreenRenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+			// Draw the skybox
+			mCommandBuffers[i]->bindGraphicPipeline(mSkyBoxPipeline->getPipeline());
+			std::vector<VkDescriptorSet> skyBoxDescriptorSets = { mSkyBoxNode->mUniformManager->getDescriptorSet(mCurrentFrame) };
+			mCommandBuffers[i]->bindDescriptorSets(mSkyBoxPipeline->getPipeline()->getPipelineLayout(), 0, skyBoxDescriptorSets.size(), skyBoxDescriptorSets.data());
+			mSkyBoxNode->draw(mCommandBuffers[i]);
+			// End skybox draw
+
+			// Draw the offscreen sphere
 			mCommandBuffers[i]->bindGraphicPipeline(mPipeline);
 			std::vector<VkDescriptorSet> offscreenDescriptorSets = { mOffscreenSphereNode->mUniformManager->getDescriptorSet(mCurrentFrame) , mOffscreenSphereNode->mMaterial->getDescriptorSet(mCurrentFrame) };
 			mCommandBuffers[i]->bindDescriptorSets(mPipeline->getPipelineLayout(), 0, offscreenDescriptorSets.size(), offscreenDescriptorSets.data());
@@ -691,10 +750,10 @@ namespace FF {
 			mPushConstantManager->getConstantParam().offset, mPushConstantManager->getConstantParam().size, &mPushConstantManager->getConstantData());
 
 			mOffscreenSphereNode->draw(mCommandBuffers[i]);
+			//
+
 			mCommandBuffers[i]->endRenderPass();
 			// End offscreen render pass
-
-
 
 			// Begin swapchain render pass
 			mCommandBuffers[i]->beginRenderPass(renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);

@@ -156,6 +156,89 @@ namespace FF {
 
 	}
 
+	void Model::loadBattleFireComponent(const std::string& path, const Wrapper::Device::Ptr& device) {
+		std::ifstream file(path, std::ios::binary);
+		if (!file.is_open()) throw std::runtime_error("Failed to open file: " + path);
+
+		// 1. Read vertex count
+		int vertexCount = 0;
+		file.read(reinterpret_cast<char*>(&vertexCount), sizeof(int));
+		if (!file) throw std::runtime_error("Failed to read vertex count");
+
+		// 2. Read vertex data
+		mBattleFireComponentVertexDatas.resize(vertexCount);
+		file.read(reinterpret_cast<char*>(mBattleFireComponentVertexDatas.data()), sizeof(BattleFireComponentVertexData) * vertexCount);
+		if (!file) throw std::runtime_error("Failed to read vertex data");
+
+		//// 3. (Optional) You can also fill mPositions, mColors, mUVs if you want consistency with your OBJ loader
+		//mPositions.clear();
+		//mColors.clear();
+		//mUVs.clear();
+		//for (const auto& v : mBattleFireVertexDatas) {
+		//	mPositions.push_back(v.mPosition.x);
+		//	mPositions.push_back(v.mPosition.y);
+		//	mPositions.push_back(v.mPosition.z);
+		//	mColors.push_back(v.mColor.r);
+		//	mColors.push_back(v.mColor.g);
+		//	mColors.push_back(v.mColor.b);
+		//	mUVs.push_back(v.mUV.x);
+		//	mUVs.push_back(v.mUV.y);
+		//}
+
+		// 4. Create vertex buffer
+		mVertexDataBuffer = Wrapper::Buffer::createVertexBuffer(device, mBattleFireComponentVertexDatas.size() * sizeof(BattleFireComponentVertexData), mBattleFireComponentVertexDatas.data());
+
+		// 5. Read submeshes until end of file
+		mSubMeshes.clear();
+		mIndexDatas.clear();
+		mIndexBuffer.reset();
+
+		while (file.peek() != EOF) {
+			int nameLen = 0;
+			file.read(reinterpret_cast<char*>(&nameLen), sizeof(int));
+			if (!file || file.eof()) break;
+
+			std::string name(nameLen, '\0');
+			file.read(&name[0], nameLen);
+			if (!file) break;
+
+			int indexCount = 0;
+			file.read(reinterpret_cast<char*>(&indexCount), sizeof(int));
+			if (!file) break;
+
+			std::vector<uint32_t> indices(indexCount);
+			file.read(reinterpret_cast<char*>(indices.data()), sizeof(uint32_t) * indexCount);
+			if (!file) break;
+
+			// For global index buffer if needed (optional, for non-submesh drawing)
+			mIndexDatas.insert(mIndexDatas.end(), indices.begin(), indices.end());
+
+			// Create submesh
+			SubMesh* submesh = new SubMesh;
+			submesh->mIndexCount = indexCount;
+			submesh->mSubMeshIndices = std::move(indices);
+
+			// Create a Vulkan buffer for the submesh indices
+			submesh->mSubMeshIndexBuffer = Wrapper::Buffer::createIndexBuffer(device, sizeof(uint32_t) * submesh->mIndexCount, submesh->mSubMeshIndices.data());
+
+			// Insert into map
+			mSubMeshes.insert({ name, submesh });
+		}
+
+		//// 6. (Optional) If you want to support classic non-submesh drawing, create a single global index buffer
+		//if (!mIndexDatas.empty()) {
+		//	mIndexBuffer = Wrapper::Buffer::createIndexBuffer(
+		//		device,
+		//		sizeof(uint32_t) * mIndexDatas.size(),
+		//		mIndexDatas.data()
+		//	);
+		//}
+
+		setVertexInputBindingDescriptions();
+		setAttributeDescription();
+
+	}
+
 	void Model::setVertexInputBindingDescriptions() {
 		if (!mVertexDatas.empty()) {
 			// If vertex data is already set, use it
@@ -169,6 +252,13 @@ namespace FF {
 			bindingDes.resize(1);
 			bindingDes[0].binding = 0;
 			bindingDes[0].stride = sizeof(BattleFireMeshVertexData);
+			bindingDes[0].inputRate = VK_VERTEX_INPUT_RATE_VERTEX; // Vertex input rate is per vertex
+		}
+		else if (!mBattleFireComponentVertexDatas.empty()) {
+			// If battle fire component vertex data is set, use it
+			bindingDes.resize(1);
+			bindingDes[0].binding = 0;
+			bindingDes[0].stride = sizeof(BattleFireComponentVertexData);
 			bindingDes[0].inputRate = VK_VERTEX_INPUT_RATE_VERTEX; // Vertex input rate is per vertex
 		}
 		else {
@@ -235,6 +325,24 @@ namespace FF {
 			attributeDes[3].location = 3;
 			attributeDes[3].format = VK_FORMAT_R32G32B32A32_SFLOAT; // Tangent
 			attributeDes[3].offset = offsetof(BattleFireMeshVertexData, mTangent);
+		}
+		else if (!mBattleFireComponentVertexDatas.empty()) {
+			// If battle fire component vertex data is set, use it
+			attributeDes.resize(3);
+			attributeDes[0].binding = 0;
+			attributeDes[0].location = 0;
+			attributeDes[0].format = VK_FORMAT_R32G32B32A32_SFLOAT; // Position
+			attributeDes[0].offset = offsetof(BattleFireComponentVertexData, mPosition);
+
+			attributeDes[1].binding = 0;
+			attributeDes[1].location = 1;
+			attributeDes[1].format = VK_FORMAT_R32G32B32A32_SFLOAT; // Texcoord
+			attributeDes[1].offset = offsetof(BattleFireComponentVertexData, mTexcoord);
+
+			attributeDes[2].binding = 0;
+			attributeDes[2].location = 2;
+			attributeDes[2].format = VK_FORMAT_R32G32B32A32_SFLOAT; // Normal
+			attributeDes[2].offset = offsetof(BattleFireComponentVertexData, mNormal);
 		}
 		else {
 			throw std::runtime_error("Error: No vertex data available to set attribute descriptions.");

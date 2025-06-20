@@ -67,6 +67,7 @@ namespace FF::Wrapper {
 		std::vector<const char*> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
 
 		extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+		//extensions.push_back(VK_EXT_NON_SEAMLESS_CUBE_MAP_EXTENSION_NAME);
 		//for (const auto& extension : extensions) {
 		//	std::cout << "Required extension: " << extension << std::endl;
 		//}

@@ -10,6 +10,9 @@ namespace FF {
 	class Texture {
 	public:
 		using Ptr = std::shared_ptr<Texture>;
+		static Ptr createHDRITexture(const Wrapper::Device::Ptr& device, const Wrapper::CommandPool::Ptr& commandPool, const std::string& filePath) {
+			return std::make_shared<Texture>(device, commandPool, filePath, VK_FORMAT_R32G32B32A32_SFLOAT);
+		}
 		static Ptr create(const Wrapper::Device::Ptr& device,const Wrapper::CommandPool::Ptr &commandPool, const std::string& filePath) {
 			return std::make_shared<Texture>(device, commandPool,filePath);
 		}
@@ -24,6 +27,7 @@ namespace FF {
 			return std::make_shared<Texture>(device, image, sampler);
 		}
 		Texture(const Wrapper::Device::Ptr& device, const Wrapper::CommandPool::Ptr &commandPool,const std::string& filePath);
+		Texture(const Wrapper::Device::Ptr& device, const Wrapper::CommandPool::Ptr& commandPool, const std::string& filePath,VkFormat format);
 		Texture(const Wrapper::Device::Ptr& device,
 			const Wrapper::CommandPool::Ptr& commandPool,
 			const std::array<std::string, 6>& cubemapPaths);

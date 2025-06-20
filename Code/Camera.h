@@ -24,10 +24,11 @@ private:
 	float       m_ypos;
 	bool		m_firstMove;
 
-	glm::mat4	m_vMatrix;
+
 	glm::mat4	m_pMatrx;
 
 public:
+	glm::mat4	m_vMatrix;
     Camera()  
     {  
        m_position = glm::vec3(1.0f);  

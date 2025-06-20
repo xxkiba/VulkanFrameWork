@@ -1,9 +1,9 @@
 #include "sampler.h"
 
 namespace FF::Wrapper {
-	Sampler::Sampler(const Device::Ptr& device)
+	Sampler::Sampler(const Device::Ptr& device, bool isCubeMap)
 		: mDevice(device) {
-		createSampler(VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT);
+		createSampler(VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT,isCubeMap);
 	}
 	Sampler::~Sampler() {
 		if (mSampler != VK_NULL_HANDLE) {
@@ -11,7 +11,7 @@ namespace FF::Wrapper {
 			mSampler = VK_NULL_HANDLE;
 		}
 	}
-	void Sampler::createSampler(VkFilter magFilter, VkFilter minFilter, VkSamplerAddressMode addressMode) {
+	void Sampler::createSampler(VkFilter magFilter, VkFilter minFilter, VkSamplerAddressMode addressMode, bool isCubeMap) {
 		VkSamplerCreateInfo samplerInfo{};
 		samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
 		samplerInfo.magFilter = magFilter;
@@ -26,6 +26,7 @@ namespace FF::Wrapper {
 
 
 		samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+		samplerInfo.flags = isCubeMap ? VK_SAMPLER_CREATE_NON_SEAMLESS_CUBE_MAP_BIT_EXT : 0;//VK_SAMPLER_CREATE_NON_SEAMLESS_CUBE_MAP_BIT_EXT
 
 		// Whether to use unnormalized coordinates
 		samplerInfo.unnormalizedCoordinates = VK_FALSE;

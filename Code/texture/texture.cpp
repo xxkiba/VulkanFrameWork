@@ -67,7 +67,68 @@ namespace FF {
 		mImageInfo.sampler = mSampler->getSampler();
 
 	}
+    Texture::Texture(const Wrapper::Device::Ptr& device, const Wrapper::CommandPool::Ptr& commandPool, const std::string& filePath, VkFormat format)
+		: mDevice(device), mCommandPool(commandPool), mFilePath(filePath) {
+		int texWidth, texHeight, texSize, texChannels;
+		//stbi_set_flip_vertically_on_load(true); // Flip the image vertically to match Vulkan's coordinate system
+		float* pixels = stbi_loadf(filePath.c_str(), &texWidth, &texHeight, &texChannels, 0);
 
+		if (!pixels || texWidth == 0 || texHeight == 0) {
+			throw std::runtime_error("Error: failed to load image or invalid dimensions! Path: " + filePath);
+		}
+
+		int pixelCount = texWidth * texHeight;
+		texSize = pixelCount * 16; // 4 channels, 4 bytes each (R, G, B, A)
+		std::vector<float> floatRGBA(pixelCount * 4);
+		for (int i = 0; i < pixelCount; ++i) {
+			floatRGBA[i * 4 + 0] = pixels[i * texChannels + 0]; // R
+			floatRGBA[i * 4 + 1] = pixels[i * texChannels + 1]; // G
+			floatRGBA[i * 4 + 2] = pixels[i * texChannels + 2]; // B
+			floatRGBA[i * 4 + 3] = 1.0f; // A
+		}
+		mImage = Wrapper::Image::create(
+			mDevice, texWidth, texHeight,
+			format,
+			VK_IMAGE_TYPE_2D,
+			VK_IMAGE_TILING_OPTIMAL,
+			VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+			VK_SAMPLE_COUNT_1_BIT,
+			VK_IMAGE_ASPECT_COLOR_BIT);
+
+		VkImageSubresourceRange subresourceRange{};
+		subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		subresourceRange.baseMipLevel = 0;
+		subresourceRange.levelCount = 1;
+		subresourceRange.baseArrayLayer = 0;
+		subresourceRange.layerCount = 1;
+
+		mImage->setImageLayout(
+			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+			VK_PIPELINE_STAGE_TRANSFER_BIT,
+			subresourceRange,
+			mCommandPool);
+
+		mImage->fillImageData(texSize, (void*)floatRGBA.data(), mCommandPool);
+
+		mImage->setImageLayout(
+			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+			VK_PIPELINE_STAGE_TRANSFER_BIT,
+			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+			subresourceRange,
+			mCommandPool);
+
+
+		// Free the image data!!
+		stbi_image_free(pixels);
+
+		mSampler = Wrapper::Sampler::create(mDevice);
+
+		mImageInfo.imageLayout = mImage->getLayout();
+		mImageInfo.imageView = mImage->getImageView();
+		mImageInfo.sampler = mSampler->getSampler();
+    }
 	// Cubemap constructor
     Texture::Texture(const Wrapper::Device::Ptr& device,
         const Wrapper::CommandPool::Ptr& commandPool,
@@ -179,8 +240,8 @@ namespace FF {
         mSampler = sampler ? sampler : Wrapper::Sampler::create(mDevice);
 
 
-        mImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL; // 常用layout
-        mImageInfo.imageView = mImage->getImageView(); // 获取 image view
+        mImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL; 
+        mImageInfo.imageView = mImage->getImageView(); 
         mImageInfo.sampler = mSampler->getSampler();
     }
 

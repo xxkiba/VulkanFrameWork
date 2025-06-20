@@ -19,6 +19,8 @@ public:
 	UniformManager();
 	~UniformManager();
 	void init(const Wrapper::Device::Ptr &device, const Wrapper::CommandPool::Ptr &commandPool,int frameCount);
+	void build();
+	void attachCubeMap(Wrapper::Image::Ptr &inImage);
 	void updateUniformBuffer(const NVPMatrices &vpMatrices, const ObjectUniform &objectUniform, const cameraParameters& cameraParams, const int frameCount);
 
 	[[nodiscard]] auto getDescriptorLayout() const {
@@ -42,5 +44,7 @@ private:
 	Wrapper::DescriptorSetLayout::Ptr mDescriptorLayout{ nullptr };
 	Wrapper::DescriptorPool::Ptr mDescriptorPool{ nullptr };
 	Wrapper::DescriptorSet::Ptr mDescriptorSet{ nullptr };
+	int mFrameCount = 1;
+
 
 };
