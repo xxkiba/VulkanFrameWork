@@ -51,6 +51,8 @@ namespace FF {
 	private:
 		void initWindow();
 
+		void initScene();
+
 		void initVulkan();
 
 		void mainLoop();
@@ -71,6 +73,7 @@ namespace FF {
 
 		//Recreate the swap chain: When the window is resized, the swap chain must be recreated, Frame View Pipeline RenderPass all need to be recreated
 		void cleanUpSwapChain();
+		void cleanUpOffScreenResources();
 		void recreateSwapChain();
 
 	private:

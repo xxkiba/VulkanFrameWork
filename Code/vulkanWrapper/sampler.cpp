@@ -16,9 +16,9 @@ namespace FF::Wrapper {
 		samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
 		samplerInfo.magFilter = magFilter;
 		samplerInfo.minFilter = minFilter;
-		samplerInfo.addressModeU = addressMode;
-		samplerInfo.addressModeV = addressMode;
-		samplerInfo.addressModeW = addressMode;
+		samplerInfo.addressModeU = isCubeMap? VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE: addressMode;
+		samplerInfo.addressModeV = isCubeMap ? VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE : addressMode;
+		samplerInfo.addressModeW = isCubeMap ? VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE : addressMode;
 
 
 		samplerInfo.anisotropyEnable = VK_TRUE;

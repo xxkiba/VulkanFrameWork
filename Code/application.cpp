@@ -435,11 +435,17 @@ namespace FF {
 		// Release command buffers
 		mCommandBuffers.clear();
 
-		mPipeline.reset();
 		mBattleFirePipeline.reset();
 		mRenderPass.reset();
 		mSwapChain.reset();
 
+	}
+	void Application::cleanUpOffScreenResources() {
+		mOffscreenRenderTarget.reset();
+		mScreenQuadPipeline.reset();
+		mSkyBoxPipeline.reset();
+		mPipeline.reset();
+		mSphereNode->mMaterial.reset();
 	}
 
 	void Application::createUniformParameters() {
@@ -460,6 +466,7 @@ namespace FF {
 		vkDeviceWaitIdle(mDevice->getDevice());
 
 		cleanUpSwapChain();
+		cleanUpOffScreenResources();
 
 		mSwapChain = Wrapper::SwapChain::create(mDevice, mWindow, mSurface, mCommandPool);
 		mWidth = mSwapChain->getSwapChainExtent().width;
@@ -468,6 +475,36 @@ namespace FF {
 		mRenderPass = Wrapper::RenderPass::create(mDevice);
 		mRenderPass = createRenderPassForSwapChain();
 		//mRenderPass = createRenderPass();
+
+
+		mOffscreenRenderTarget = OffscreenRenderTarget::create(
+			mDevice, mCommandPool,
+			mWidth, mHeight,
+			mSwapChain->getImageCount(),
+			VK_FORMAT_R32G32B32A32_SFLOAT, // Color format
+			VK_FORMAT_D24_UNORM_S8_UINT // Depth format
+		);
+
+		mSphereNode->mMaterial = Material::create();
+		//mSphereNode->mMaterial->attachTexturePaths(textureFiles);
+		mSphereNode->mMaterial->attachImages(mOffscreenRenderTarget->getRenderTargetImages()); // Attach the offscreen render target images to the material
+		mSphereNode->mMaterial->init(mDevice, mCommandPool, mSwapChain->getImageCount());
+
+		mPipeline = createPipeline("shaders/testVs.spv", "shaders/testFs.spv");
+		mScreenQuadPipeline = createScreenQuadPipeline(mRenderPass);
+		mSkyBoxPipeline = OffscreenPipeline::create(mDevice);
+		mSkyBoxPipeline->build(
+			mOffscreenRenderTarget->getRenderPass(),
+			mWidth, mHeight,
+			"shaders/SkyboxVert.spv", "shaders/SkyBoxFrag.spv",
+			{ mSkyBoxNode->mUniformManager->getDescriptorLayout()->getLayout() },
+			mSkyBoxNode->mModels[0]->getVertexInputBindingDescriptions(),
+			mSkyBoxNode->mModels[0]->getAttributeDescriptions(),
+			nullptr, // No push constants
+			mDevice->getMaxUsableSampleCount(),
+			VK_FRONT_FACE_CLOCKWISE
+		);
+
 
 		mSwapChain->createFrameBuffers(mRenderPass);
 
