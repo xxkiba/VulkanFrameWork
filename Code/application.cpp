@@ -21,6 +21,13 @@ namespace FF {
 		mSkyBoxNode->mCamera.move(moveDirection);
 	}
 
+	float Application::GetFrameTime() {
+		static double lastTime = 0.0;
+		double currentTime = glfwGetTime();
+		float deltaTime = static_cast<float>(currentTime - lastTime);
+		lastTime = currentTime;
+		return deltaTime;
+	}
 	void Application::initWindow() {
 		
 		mWindow = Wrapper::Window::create(mWidth, mHeight);
@@ -30,10 +37,14 @@ namespace FF {
 		mOffscreenSphereNode = OffscreenSceneNode::create();
 		mSkyBoxNode = OffscreenSceneNode::create();
 
-		mSphereNode->mCamera.lookAt(glm::vec3(0.0f, 0.0f, 5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-		mOffscreenSphereNode->mCamera.lookAt(glm::vec3(0.0f, 0.0f, 5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		//mSphereNode->mCamera.lookAt(glm::vec3(0.0f, 0.0f, 5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		//mOffscreenSphereNode->mCamera.lookAt(glm::vec3(0.0f, 0.0f, 5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		
+		mSphereNode->mCamera.Init(glm::vec3(0.0f, 0.0f, 0.0f), 5.0f, glm::vec3(0.0f, 0.0f, -1.0f));
+		mOffscreenSphereNode->mCamera.Init(glm::vec3(0.0f, 0.0f, 0.0f), 5.0f, glm::vec3(0.0f, 0.0f, -1.0f));
+		
 		/* SkyBox Node Should be in the center */
-		mSkyBoxNode->mCamera.lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 5.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		mSkyBoxNode->mCamera.Init(glm::vec3(0.0f, 0.0f, 0.0f), 5.0f, glm::vec3(0.0f, 0.0f, -1.0f));
 		// 
 		//mSphereNode->mCamera.update();
 
@@ -634,24 +645,34 @@ namespace FF {
 		while (!mWindow->shouldClose()) {
 			mWindow->pollEvents();
 			mWindow->processEvents();
-
+			float frameTime = GetFrameTime();
 			//mModel->update();
 
-			mNVPMatrices.mViewMatrix = mSphereNode->mCamera.getViewMatrix();
-			mNVPMatrices.mProjectionMatrix = mSphereNode->mCamera.getProjectMatrix();
+			//mOffscreenSphereNode->mCamera.horizontalRoundRotate(GetFrameTime(), glm::vec3(0.0f), 5.0f, 30.0f);
+			//mNVPMatrices.mViewMatrix = mSphereNode->mCamera.getViewMatrix();
+			//mNVPMatrices.mProjectionMatrix = mSphereNode->mCamera.getProjectMatrix();
+			//mNVPMatrices.mNormalMatrix = glm::transpose(glm::inverse(mNVPMatrices.mViewMatrix));
+			//mCameraParameters.CameraWorldPosition = mSphereNode->mCamera.getCamPosition();
+
+
+			//mSphereNode->mUniformManager->updateUniformBuffer(mNVPMatrices, mSphereNode->mModels[0]->getUniform(), mCameraParameters,mCurrentFrame);
+
+			mOffscreenSphereNode->mCamera.horizontalRoundRotate(frameTime, glm::vec3(0.0f), 5.0f, 30.0f);
+			mNVPMatrices.mViewMatrix = mOffscreenSphereNode->mCamera.getViewMatrix();
+			mNVPMatrices.mProjectionMatrix = mOffscreenSphereNode->mCamera.getProjectMatrix();
 			mNVPMatrices.mNormalMatrix = glm::transpose(glm::inverse(mNVPMatrices.mViewMatrix));
-			mCameraParameters.CameraWorldPosition = mSphereNode->mCamera.getCamPosition();
+			mCameraParameters.CameraWorldPosition = mOffscreenSphereNode->mCamera.getCamPosition();
 
-
-			mSphereNode->mUniformManager->updateUniformBuffer(mNVPMatrices, mSphereNode->mModels[0]->getUniform(), mCameraParameters,mCurrentFrame);
 			mOffscreenSphereNode->mUniformManager->updateUniformBuffer(mNVPMatrices, mOffscreenSphereNode->mModels[0]->getUniform(), mCameraParameters, mCurrentFrame);
 
 
+			mSkyBoxNode->mCamera.horizontalRoundRotate(frameTime, glm::vec3(0.0f), 5.0f, 30.0f);
 			// Skybox node should always in the center of object
 			mNVPMatrices.mViewMatrix = mSkyBoxNode->mCamera.getViewMatrix();
 			mNVPMatrices.mProjectionMatrix = mSkyBoxNode->mCamera.getProjectMatrix();
 			mNVPMatrices.mNormalMatrix = glm::transpose(glm::inverse(mNVPMatrices.mViewMatrix));
 			mCameraParameters.CameraWorldPosition = mSkyBoxNode->mCamera.getCamPosition();
+			mSkyBoxNode->mModels[0]->setModelMatrix(glm::translate(glm::mat4(1.0f), glm::vec3(mSkyBoxNode->mCamera.getCamPosition()))); // Skybox should always be at the origin
 
 			mSkyBoxNode->mUniformManager->updateUniformBuffer(mNVPMatrices, mSkyBoxNode->mModels[0]->getUniform(), mCameraParameters, mCurrentFrame);
 

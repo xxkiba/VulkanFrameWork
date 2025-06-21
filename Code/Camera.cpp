@@ -9,12 +9,12 @@ void Camera::lookAt(glm::vec3 _pos, glm::vec3 _target, glm::vec3 _up)
 	glm::vec3 right = glm::normalize(glm::cross(m_front, _up));
 	m_up = glm::normalize(glm::cross(right, m_front));
 
-	m_vMatrix = glm::lookAt(m_position, m_position + m_front, m_up);
+	m_vMatrix = glm::lookAt(m_position, m_front, m_up);
 }
 
 void Camera::update()
 {
-	m_vMatrix = glm::lookAt(m_position, m_position + m_front, m_up);
+	m_vMatrix = glm::lookAt(m_position, m_targetPosition, m_up);
 }
 
 glm::vec4 Camera::getCamPosition()
@@ -87,6 +87,44 @@ void Camera::yaw(float _xOffset)
 	m_front = glm::normalize(m_front);
 	update();
 }
+void Camera::Init(glm::vec3 inTargetPosition, float inDistanceFromTarget, glm::vec3 inViewDirection) {
+	m_targetPosition = inTargetPosition;
+	inViewDirection = glm::normalize(inViewDirection);
+	mInitialViewDirection = inViewDirection;
+	mDistanceFromTarget = inDistanceFromTarget;
+	mRotateAngle = 0.0f;
+	glm::vec3 cameraPosition = inTargetPosition - inViewDirection * inDistanceFromTarget;
+	glm::vec3 rightDirection = glm::cross(inViewDirection, glm::vec3(0.0f, 1.0f, 0.0f));
+	glm::vec3 upDirection = glm::normalize(glm::cross(rightDirection, inViewDirection));
+	m_position = cameraPosition;
+	m_front = inViewDirection;
+	m_up = upDirection;
+	update();
+}
+
+
+void Camera::horizontalRoundRotate(float inDeltaTime, glm::vec3 inTargetPosition, float inDistanceFromTarget, float inRotateSpeed) {
+
+	m_targetPosition = inTargetPosition;
+	float newAngle = mRotateAngle + inRotateSpeed * inDeltaTime;
+	mRotateAngle = newAngle;
+	glm::mat4 rotateMatrix;
+	rotateMatrix = glm::rotate(glm::mat4(1.0f), glm::radians(newAngle), glm::vec3(0.0f, 1.0f, 0.0f));
+	glm::vec3 inverseInitialViewDirection = -mInitialViewDirection;
+	glm::vec3 inverseViewDirection = glm::vec3(rotateMatrix * glm::vec4(inverseInitialViewDirection, 0.0f));
+	inverseViewDirection = glm::normalize(inverseViewDirection);
+
+	glm::vec3 viewDirection = -inverseViewDirection;
+
+	glm::vec3 mCameraPosition = inTargetPosition - viewDirection * inDistanceFromTarget;
+	m_position = mCameraPosition;
+	m_front = glm::normalize(viewDirection);
+	glm::vec3 rightDirection = glm::normalize(glm::cross(m_front, glm::vec3(0.0f, 1.0f, 0.0f)));
+	glm::vec3 upDirection = glm::normalize(glm::cross(rightDirection, m_front));
+	m_up = upDirection;
+	update();
+}
+
 void Camera::setSentitivity(float _s)
 {
 	m_sensitivity = _s;

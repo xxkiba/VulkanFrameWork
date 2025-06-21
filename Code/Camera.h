@@ -14,6 +14,11 @@ private:
 	glm::vec3	m_position;
 	glm::vec3	m_front;
 	glm::vec3	m_up;
+
+	glm::vec3	mInitialViewDirection;
+	glm::vec3	m_targetPosition; // Target position for the camera to look at
+	float	mDistanceFromTarget; // Distance from the target position
+
 	float		m_speed;
 
 	float		m_pitch;
@@ -24,16 +29,22 @@ private:
 	float       m_ypos;
 	bool		m_firstMove;
 
-
+	float 	mRotateAngle;
 	glm::mat4	m_pMatrx;
+	glm::mat4	m_vMatrix;
 
 public:
-	glm::mat4	m_vMatrix;
+	
     Camera()  
     {  
        m_position = glm::vec3(1.0f);  
        m_front = glm::vec3(1.0f);  
        m_up = glm::vec3(1.0f);  
+
+	   mInitialViewDirection = glm::normalize(glm::vec3(0.0f, -0.2f, 1.0f)); // Default view direction looking down the negative Z-axis
+	   m_targetPosition = glm::vec3(0.0f, 0.0f, 0.0f); // Default target position at the origin
+	   mDistanceFromTarget = 5.0f; // Default distance from the target position
+
        m_speed = 0.01f;  
 
        m_pitch = 0.0f;  
@@ -46,14 +57,17 @@ public:
 
        m_vMatrix = glm::mat4(1.0f);  
 	   m_pMatrx = glm::mat4(1.0f);
+
+	   mRotateAngle = 0.0f;
     }
 	~Camera()
 	{
 
 	}
+	void Init(glm::vec3 inTargetPosition, float inDistanceFromTarget, glm::vec3 inViewDirection);
 	void lookAt(glm::vec3 _pos , glm::vec3 _target , glm::vec3 _up );
 	void update();
-
+	void horizontalRoundRotate(float inDeltaTime, glm::vec3 inTargetPosition, float inDistanceFromTarget, float inRotateSpeed);
 	glm::vec4 getCamPosition();
 
 	glm::mat4 getViewMatrix();

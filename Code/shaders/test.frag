@@ -47,20 +47,20 @@ void main(){
     
     vec3 L = normalize(vec3(1.0,1.0, 1.0)); // Light direction
     vec3 N = normalize(V_NormalWS.xyz);
-    vec3 V = normalize(V_PositionWS.xyz);
+    vec3 V = normalize(CameraWorldPosition.xyz - V_PositionWS.xyz); // surface -> eye
     vec3 H = normalize(L + V); // Halfway vector
 
     float NdotL = max(dot(N, L), 0.0);
     float NdotV = max(dot(N, V), 0.0);
     float NdotH = max(dot(N, H), 0.0);
-    float roughness = 0.01; // Example roughness value, can be replaced with a varying input
+    float roughness = 0.1; // Example roughness value, can be replaced with a varying input
 
     vec3 F0 = vec3(0.04); // Fresnel reflectance at normal incidence for dielectrics
     vec3 albedo = vec3(1.0,0.0,0.0); // Example albedo color, can be replaced with a varying input
     vec3 FinalColor = vec3(0.0);
     float eps = 0.01;
 
-    float metallic = 0.0; // use metallic 
+    float metallic = 0.6; // use metallic 
     F0 = mix(F0, albedo, metallic); // Adjust F0 based on metallic property, linear interpolation between F0 and albedo
 
 
@@ -87,4 +87,5 @@ void main(){
     }
 
     FragColor = vec4(FinalColor, 1.0);
+    //FragColor = vec4(vec3(NdotL), 1.0);
 }

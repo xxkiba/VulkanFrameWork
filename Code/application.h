@@ -46,6 +46,7 @@ namespace FF {
 		void onMouseMove(double xpos, double ypos);
 
 		void onKeyPress(CAMERA_MOVE moveDirection);
+		float GetFrameTime();
 
 	private:
 		void initWindow();
