@@ -49,7 +49,8 @@ namespace FF::Wrapper {
 		const VkMemoryPropertyFlags& properties,
 		const VkSampleCountFlagBits& sample,
 		const VkImageAspectFlags &aspectFlags,
-		const bool& isCubeMap):mDevice(device),mFormat(format),mImageLayout(VK_IMAGE_LAYOUT_UNDEFINED){
+		const bool& isCubeMap,
+		const int mipmapLevels):mDevice(device),mFormat(format),mImageLayout(VK_IMAGE_LAYOUT_UNDEFINED){
 		if (width == 0 || height == 0) {
 			throw std::runtime_error("Image width or height is zero!");
 		}
@@ -65,7 +66,7 @@ namespace FF::Wrapper {
 		imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
 		imageInfo.imageType = imageType;
 		imageInfo.extent = mExtent;
-		imageInfo.mipLevels = 1;
+		imageInfo.mipLevels = mipmapLevels;
 		imageInfo.arrayLayers = isCubeMap ? 6 : 1;
 		imageInfo.format = format;
 		imageInfo.tiling = tiling;
@@ -103,7 +104,7 @@ namespace FF::Wrapper {
 		viewInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
 		viewInfo.subresourceRange.aspectMask = aspectFlags;
 		viewInfo.subresourceRange.baseMipLevel = 0;
-		viewInfo.subresourceRange.levelCount = 1;
+		viewInfo.subresourceRange.levelCount = mipmapLevels;
 		viewInfo.subresourceRange.baseArrayLayer = 0;
 		viewInfo.subresourceRange.layerCount = isCubeMap ? 6 : 1;
 

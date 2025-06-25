@@ -41,6 +41,7 @@ namespace FF::Wrapper {
 		VkPipelineLayoutCreateInfo mPipelineLayoutInfo{};
 		std::vector<VkViewport> mViewports{};
 		std::vector<VkRect2D> mScissors{};
+		std::vector<VkDynamicState> dynamicStates = {};
 
 		//TODO: render pass and subpass
 
@@ -50,7 +51,5 @@ namespace FF::Wrapper {
 		Device::Ptr mDevice{ nullptr };
 		RenderPass::Ptr mRenderPass{ nullptr };
 		std::vector<Shader::Ptr> mShaders{};
-
-
 	};
 }

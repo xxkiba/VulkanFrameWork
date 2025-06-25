@@ -16,7 +16,7 @@ namespace FF {
 
 		mConstantData.offsets[0] = glm::vec4(-1.0f,0.0f,0.0f,0.0f);
 		mConstantData.offsets[1] = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);
-		mConstantData.offsets[1] = glm::vec4(0.0f, 1.0f, 0.0f, 0.0f);
+		mConstantData.offsets[2] = glm::vec4(0.0f, 1.0f, 0.0f, 0.0f);
 	}
 
 	constantData& PushConstantManager::getConstantData() {

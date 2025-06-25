@@ -54,6 +54,8 @@ namespace FF::Wrapper {
 		
 		void copyBufferToImage(const VkBuffer& srcBuffer, VkImage dstImage, VkImageLayout dstImageLayout, size_t width, size_t height, bool isCubeMap = false);
 
+		void CopyImageToImage(const VkImage& inSrcImage, VkImage inDstImage, size_t inWidth, size_t inHeight, int inMipmapLevel);
+
 		void CopyRTImageToCubeMap(const VkImage& inSrcImage,VkImage inDstCubeMap, size_t inWidth, size_t inHeight, int inFace, int inMipmapLevel);
 
 		void submitCommandBuffer(VkQueue queue, VkFence fence = VK_NULL_HANDLE);

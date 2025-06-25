@@ -60,8 +60,9 @@ namespace FF::Wrapper {
 			const VkMemoryPropertyFlags& properties,
 			const VkSampleCountFlagBits& sample,
 			const VkImageAspectFlags& aspectFlag,
-			const bool& isCubeMap = false) {
-			return std::make_shared<Image>(device, width, height, format, imageType, tiling, usage, properties,sample, aspectFlag, isCubeMap);
+			const bool& isCubeMap = false,
+			const int mimapLevels = 1) {
+			return std::make_shared<Image>(device, width, height, format, imageType, tiling, usage, properties,sample, aspectFlag, isCubeMap,mimapLevels);
 		}
 		Image(const Device::Ptr& device, 
 			const int& width,
@@ -73,7 +74,8 @@ namespace FF::Wrapper {
 			const VkMemoryPropertyFlags& properties, 
 			const VkSampleCountFlagBits& sample,
 			const VkImageAspectFlags& aspectFlag,
-			const bool& isCubeMap = false);
+			const bool& isCubeMap = false,
+			const int mipmapLevels = 1);
 		~Image();
 		void createImageView(VkImageViewType viewType);
 		void destroyImageView();

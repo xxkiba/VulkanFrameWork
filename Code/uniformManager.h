@@ -21,6 +21,7 @@ public:
 	void init(const Wrapper::Device::Ptr &device, const Wrapper::CommandPool::Ptr &commandPool,int frameCount);
 	void build();
 	void attachCubeMap(Wrapper::Image::Ptr &inImage);
+	void attachImage(Wrapper::Image::Ptr& inImage);
 	void updateUniformBuffer(const NVPMatrices &vpMatrices, const ObjectUniform &objectUniform, const cameraParameters& cameraParams, const int frameCount);
 
 	[[nodiscard]] auto getDescriptorLayout() const {

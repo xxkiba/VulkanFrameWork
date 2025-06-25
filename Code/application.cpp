@@ -40,17 +40,17 @@ namespace FF {
 		//mSphereNode->mCamera.lookAt(glm::vec3(0.0f, 0.0f, 5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 		//mOffscreenSphereNode->mCamera.lookAt(glm::vec3(0.0f, 0.0f, 5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 		
-		mSphereNode->mCamera.Init(glm::vec3(0.0f, 0.0f, 0.0f), 5.0f, glm::vec3(0.0f, 0.0f, -1.0f));
-		mOffscreenSphereNode->mCamera.Init(glm::vec3(0.0f, 0.0f, 0.0f), 5.0f, glm::vec3(0.0f, 0.0f, -1.0f));
+		mSphereNode->mCamera.Init(glm::vec3(0.0f, 0.0f, 0.0f), 5.0f, glm::vec3(1.0f, 1.0f, 1.0f));
+		mOffscreenSphereNode->mCamera.Init(glm::vec3(0.0f, 0.0f, 0.0f), 5.0f, glm::vec3(0.0f, -0.2f, 1.0f));
 		
 		/* SkyBox Node Should be in the center */
-		mSkyBoxNode->mCamera.Init(glm::vec3(0.0f, 0.0f, 0.0f), 5.0f, glm::vec3(0.0f, 0.0f, -1.0f));
+		mSkyBoxNode->mCamera.Init(glm::vec3(0.0f, 0.0f, 0.0f), 5.0f, glm::vec3(0.0f, -0.2f, 1.0f));
 		// 
 		//mSphereNode->mCamera.update();
 
-		mSphereNode->mCamera.setPerpective(60.0f, static_cast<float>(mWidth) / static_cast<float>(mHeight), 0.1f, 100.0f);
-		mOffscreenSphereNode->mCamera.setPerpective(60.0f, static_cast<float>(mWidth) / static_cast<float>(mHeight), 0.1f, 100.0f);
-		mSkyBoxNode->mCamera.setPerpective(60.0f, static_cast<float>(mWidth) / static_cast<float>(mHeight), 0.1f, 100.0f);
+		mSphereNode->mCamera.setPerpective(45.0f, static_cast<float>(mWidth) / static_cast<float>(mHeight), 0.1f, 1000.0f);
+		mOffscreenSphereNode->mCamera.setPerpective(45.0f, static_cast<float>(mWidth) / static_cast<float>(mHeight), 0.1f, 1000.0f);
+		mSkyBoxNode->mCamera.setPerpective(45.0f, static_cast<float>(mWidth) / static_cast<float>(mHeight), 0.1f, 1000.0f);
 
 		mSphereNode->mCamera.setSpeed(0.001f);
 		mOffscreenSphereNode->mCamera.setSpeed(0.001f);
@@ -84,12 +84,34 @@ namespace FF {
 
 		
 		HDRI::Ptr hdri = HDRI::create(mDevice, mCommandPool);
+		// HDRI cubemap
 		Wrapper::Image::Ptr HDRICubemap = hdri->LoadHDRICubeMapFromFile(
 			mDevice, mCommandPool,
 			"assets/1.hdr",
 			512, 512,
 			"shaders/HDRI2CubemapVert.spv", "shaders/HDRI2CubemapFrag.spv"
 		);
+		// // Diffuse irradiance map
+		Wrapper::Image::Ptr diffuseIrradianceMap = hdri->generateDiffuseIrradianceMap(
+			HDRICubemap,
+			mDevice, mCommandPool,
+			32, 32,
+			"shaders/SkyboxVert.spv", "shaders/CaptureDiffuseIrradianceFrag.spv"
+		);
+		 // Specular prefilter map
+		Wrapper::Image::Ptr specularPrefilterMap = hdri->generateSpecularPrefilterMap(
+			HDRICubemap,
+			mDevice, mCommandPool,
+			128, 128,
+			"shaders/SkyboxVert.spv", "shaders/CaptureSpecularPrefilterFrag.spv"
+		);
+		// // BRDF LUT
+		Wrapper::Image::Ptr brdfLUT = hdri->generateBRDFLUT(
+			mDevice, mCommandPool,
+			512, 512,
+			"shaders/full_screen_triangle.spv", "shaders/generateBRDFFrag.spv"
+		);
+
 
 		mSphereNode->mUniformManager = UniformManager::create();
 		mSphereNode->mUniformManager->init(mDevice,mCommandPool, mSwapChain->getImageCount());
@@ -100,9 +122,16 @@ namespace FF {
 		mSkyBoxNode->mUniformManager->attachCubeMap(HDRICubemap);
 		mSkyBoxNode->mUniformManager->build();
 
-
+		/*
+		*	layout(set =0, binding = 4) uniform samplerCube U_prefilteredColor;
+		*	layout(set = 0, binding = 5) uniform samplerCube U_DiffuseIrradiance;
+		*	layout(set = 0, binding = 6) uniform sampler2D U_BRDFLUT;
+		*/
 		mOffscreenSphereNode->mUniformManager = UniformManager::create();
 		mOffscreenSphereNode->mUniformManager->init(mDevice, mCommandPool, mSwapChain->getImageCount());
+		mOffscreenSphereNode->mUniformManager->attachCubeMap(specularPrefilterMap);
+		mOffscreenSphereNode->mUniformManager->attachCubeMap(diffuseIrradianceMap);
+		mOffscreenSphereNode->mUniformManager->attachImage(brdfLUT);
 		mOffscreenSphereNode->mUniformManager->build();
 
 
@@ -438,6 +467,7 @@ namespace FF {
 		mBattleFirePipeline.reset();
 		mRenderPass.reset();
 		mSwapChain.reset();
+		mCurrentFrame = 0;
 
 	}
 	void Application::cleanUpOffScreenResources() {
@@ -697,7 +727,7 @@ namespace FF {
 			mOffscreenSphereNode->mCamera.horizontalRoundRotate(frameTime, glm::vec3(0.0f), 5.0f, 30.0f);
 			mNVPMatrices.mViewMatrix = mOffscreenSphereNode->mCamera.getViewMatrix();
 			mNVPMatrices.mProjectionMatrix = mOffscreenSphereNode->mCamera.getProjectMatrix();
-			mNVPMatrices.mNormalMatrix = glm::transpose(glm::inverse(mNVPMatrices.mViewMatrix));
+			mNVPMatrices.mNormalMatrix = glm::transpose(glm::inverse(mOffscreenSphereNode->mModels[0]->getUniform().mModelMatrix));
 			mCameraParameters.CameraWorldPosition = mOffscreenSphereNode->mCamera.getCamPosition();
 
 			mOffscreenSphereNode->mUniformManager->updateUniformBuffer(mNVPMatrices, mOffscreenSphereNode->mModels[0]->getUniform(), mCameraParameters, mCurrentFrame);
@@ -707,7 +737,7 @@ namespace FF {
 			// Skybox node should always in the center of object
 			mNVPMatrices.mViewMatrix = mSkyBoxNode->mCamera.getViewMatrix();
 			mNVPMatrices.mProjectionMatrix = mSkyBoxNode->mCamera.getProjectMatrix();
-			mNVPMatrices.mNormalMatrix = glm::transpose(glm::inverse(mNVPMatrices.mViewMatrix));
+			mNVPMatrices.mNormalMatrix = glm::transpose(glm::inverse(mSkyBoxNode->mModels[0]->getUniform().mModelMatrix));
 			mCameraParameters.CameraWorldPosition = mSkyBoxNode->mCamera.getCamPosition();
 			mSkyBoxNode->mModels[0]->setModelMatrix(glm::translate(glm::mat4(1.0f), glm::vec3(mSkyBoxNode->mCamera.getCamPosition()))); // Skybox should always be at the origin
 

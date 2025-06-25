@@ -26,8 +26,20 @@ namespace FF {
             const std::vector<VkVertexInputAttributeDescription>& attributeDes,
             const std::vector<VkPushConstantRange>* pushConstantRanges = nullptr,
             VkSampleCountFlagBits sampleCount = VK_SAMPLE_COUNT_1_BIT,
-			VkFrontFace inFrontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE
+			VkFrontFace inFrontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE,
+			bool needFlipVewport = true,
+			bool enableDynamicViewPort = false
         );
+
+        void buildScreenQuadPipeline(const Wrapper::RenderPass::Ptr& renderPass,
+            uint32_t width, uint32_t height,
+            const std::string& vertexShaderFile, const std::string& fragShaderFile,
+            const std::vector<VkDescriptorSetLayout>& descriptorSetLayouts,
+            const std::vector<VkPushConstantRange>* pushConstantRanges = nullptr,
+            VkSampleCountFlagBits sampleCount = VK_SAMPLE_COUNT_1_BIT,
+            VkFrontFace inFrontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE,
+            bool needFlipVewport = true,
+            bool enableDynamicViewPort = false);
 
         Wrapper::Pipeline::Ptr getPipeline() const { return mPipeline; }
 

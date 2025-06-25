@@ -8,6 +8,7 @@
 #include "../offscreenRender/OffscreenSceneNode.h"
 #include "../model.h"
 #include "../Camera.h"
+#include "../pushConstantManager.h"
 #include "texture.h"
 
 namespace FF {
@@ -34,6 +35,44 @@ namespace FF {
 			uint32_t texWidth = 1024, uint32_t texHeight = 1024,
 			std::string inVertShaderPath = "shaders/SkyboxVert.spv",
 			std::string inFragShaderPath = "shaders/SkyBoxFrag.spv");
+
+
+		Wrapper::Image::Ptr generateDiffuseIrradianceMap(
+			Wrapper::Image::Ptr hdriCubMapImage,
+			const Wrapper::Device::Ptr& device,
+			const Wrapper::CommandPool::Ptr& commandPool,
+			uint32_t texWidth, uint32_t texHeight,
+			std::string inVertShaderPath, std::string inFragShaderPath);
+
+		void captureDiffuseIrradianceMap(
+			Wrapper::Image::Ptr& hdriCubMapImage,
+			Wrapper::Image::Ptr& diffuseIrradianceCubMapImage,
+			uint32_t texWidth = 32, uint32_t texHeight =32,
+			std::string inVertShaderPath = "shaders/SkyboxVert.spv",
+			std::string inFragShaderPath = "shaders/CaptureDiffuseIrradianceFrag.spv");
+
+		Wrapper::Image::Ptr generateSpecularPrefilterMap(
+			Wrapper::Image::Ptr hdriCubMapImage,
+			const Wrapper::Device::Ptr& device,
+			const Wrapper::CommandPool::Ptr& commandPool,
+			uint32_t texWidth, uint32_t texHeight,
+			std::string inVertShaderPath, std::string inFragShaderPath);
+
+		void captureSpecularPrefilterMap(
+			Wrapper::Image::Ptr& hdriCubMapImage,
+			Wrapper::Image::Ptr& specularPrefilterCubMapImage,
+			uint32_t texWidth = 128, uint32_t texHeight = 128,
+			std::string inVertShaderPath = "shaders/SkyboxVert.spv",
+			std::string inFragShaderPath = "shaders/CaptureSpecularPrefilterFrag.spv");
+
+		Wrapper::Image::Ptr generateBRDFLUT(
+			const Wrapper::Device::Ptr& device,
+			const Wrapper::CommandPool::Ptr& commandPool,
+			uint32_t texWidth, uint32_t texHeight,
+			std::string inVertShaderPath, std::string inFragShaderPath);
+
+
+
 		void InitMatrices();
 
 	private:
@@ -41,10 +80,6 @@ namespace FF {
 		Wrapper::Image::Ptr mImage{ nullptr };
 		Wrapper::Sampler::Ptr mSampler{ nullptr };
 		Wrapper::CommandPool::Ptr mCommandPool{ nullptr };
-
-		OffscreenRenderTarget::Ptr mOffscreenRenderTarget{ nullptr };
-		OffscreenPipeline::Ptr mOffscreenPipeline{ nullptr };
-		OffscreenSceneNode::Ptr mOffscreenSphereNode{ nullptr };
 
 		VkDescriptorImageInfo mImageInfo{};
 		std::string mFilePath;

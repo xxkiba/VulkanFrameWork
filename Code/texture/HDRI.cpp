@@ -8,13 +8,11 @@ namespace FF {
 		// Initialize the offscreen render target and pipeline if needed
 		// mOffscreenRenderTarget = Wrapper::OffscreenRenderTarget::create(mDevice);
 		// mOffscreenPipeline = Wrapper::OffscreenPipeline::create(mDevice);
+		InitMatrices();
 	}
 
 	HDRI::~HDRI() {
 		// Cleanup resources if needed
-		mOffscreenRenderTarget.reset();
-		mOffscreenPipeline.reset();
-		mOffscreenSphereNode.reset();
 		mImage.reset();
 		mSampler.reset();
 	}
@@ -47,7 +45,12 @@ namespace FF {
 		uint32_t texWidth, uint32_t texHeight,
 		std::string inVertShaderPath, std::string inFragShaderPath) {
 
-		InitMatrices();
+
+		OffscreenRenderTarget::Ptr mOffscreenRenderTarget{ nullptr };
+		OffscreenPipeline::Ptr mOffscreenPipeline{ nullptr };
+		OffscreenSceneNode::Ptr mOffscreenSphereNode{ nullptr };
+
+		//InitMatrices();
 		Texture::Ptr hdriTexture = Texture::createHDRITexture(mDevice, mCommandPool, filePath);
 
 
@@ -199,6 +202,511 @@ namespace FF {
 		// Load the HDR image data
 		HDRI2CubeMap(filePath, mImage, texWidth, texHeight, inVertShaderPath, inFragShaderPath);
 
+		mImage->setImageLayout(
+			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+			VK_PIPELINE_STAGE_TRANSFER_BIT,
+			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+			subresourceRange,
+			mCommandPool);
+
+		return mImage;
+	}
+
+	void HDRI::captureDiffuseIrradianceMap(Wrapper::Image::Ptr& hdriCubMapImage,
+		Wrapper::Image::Ptr& diffuseIrradianceCubMapImage,
+		uint32_t texWidth, uint32_t texHeight,
+		std::string inVertShaderPath,
+		std::string inFragShaderPath) {
+
+		OffscreenRenderTarget::Ptr mOffscreenRenderTarget{ nullptr };
+		OffscreenPipeline::Ptr mOffscreenPipeline{ nullptr };
+		OffscreenSceneNode::Ptr mOffscreenSphereNode{ nullptr };
+
+
+		mOffscreenRenderTarget = OffscreenRenderTarget::create(
+			mDevice, mCommandPool,
+			texWidth, texHeight,
+			1,
+			VK_FORMAT_R32G32B32A32_SFLOAT, // Color format
+			VK_FORMAT_D24_UNORM_S8_UINT, // Depth format
+			VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL // Final layout for the offscreen render target, copy from render target to cubemap image, need to be VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL
+		);
+
+		Model::Ptr skyboxModel = Model::create(mDevice);
+		skyboxModel->loadBattleFireComponent("assets/skybox.staticmesh", mDevice);
+
+		mOffscreenSphereNode = OffscreenSceneNode::create();
+		mOffscreenSphereNode->mUniformManager = UniformManager::create();
+		mOffscreenSphereNode->mUniformManager->init(mDevice, mCommandPool, 1);
+		mOffscreenSphereNode->mUniformManager->attachCubeMap(hdriCubMapImage);
+		mOffscreenSphereNode->mUniformManager->build();
+		mOffscreenSphereNode->mModels.push_back(skyboxModel);
+		mOffscreenSphereNode->mModels[0]->setModelMatrix(glm::mat4(1.0f));
+
+		std::vector<std::string> textureFiles;
+		textureFiles.push_back("assets/book.jpg");
+		textureFiles.push_back("assets/diffuse.jpg");
+		textureFiles.push_back("assets/metal.jpg");
+		mOffscreenSphereNode->mMaterial = Material::create();
+		mOffscreenSphereNode->mMaterial->attachTexturePaths(textureFiles);
+		mOffscreenSphereNode->mMaterial->init(mDevice, mCommandPool, 1);
+		//mOffscreenSphereNode->mMaterial->attachImages({ inCubMapImage });
+
+		mOffscreenPipeline = OffscreenPipeline::create(mDevice);
+		mOffscreenPipeline->build(
+			mOffscreenRenderTarget->getRenderPass(),
+			texWidth, texHeight,
+			inVertShaderPath, inFragShaderPath,
+			{ mOffscreenSphereNode->mUniformManager->getDescriptorLayout()->getLayout(), mOffscreenSphereNode->mMaterial->getDescriptorLayout()->getLayout() },
+			mOffscreenSphereNode->mModels[0]->getVertexInputBindingDescriptions(),
+			mOffscreenSphereNode->mModels[0]->getAttributeDescriptions(),
+			nullptr, // No push constants
+			mDevice->getMaxUsableSampleCount(),
+			VK_FRONT_FACE_COUNTER_CLOCKWISE,
+			false);
+
+
+		gCaptureCameras[3].lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f));
+		gCaptureCameras[2].lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+
+		VkRenderPassBeginInfo offScreenRenderPassBeginInfo{};
+		offScreenRenderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+		offScreenRenderPassBeginInfo.renderPass = mOffscreenRenderTarget->getRenderPass()->getRenderPass();
+		offScreenRenderPassBeginInfo.framebuffer = mOffscreenRenderTarget->getOffScreenFramebuffers()[0];
+		offScreenRenderPassBeginInfo.renderArea.offset = { 0, 0 };
+		offScreenRenderPassBeginInfo.renderArea.extent = { static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight) };
+		std::vector<VkClearValue> cvs;
+		//0: final output color attachment 1:multisample image 2: depth attachment
+		VkClearValue offScreenClearFinalColor{};
+		offScreenClearFinalColor.color = { 0.0f, 0.0f, 0.0f, 0.0f };
+		cvs.push_back(offScreenClearFinalColor);
+
+		//1: Multisample image
+		VkClearValue offScreenClearMultiSample{};
+		offScreenClearMultiSample.color = { 0.0f, 0.0f, 0.0f, 0.0f };
+		cvs.push_back(offScreenClearMultiSample);
+
+		//2: Depth attachment
+		VkClearValue offScreenClearDepth{};
+		offScreenClearDepth.depthStencil = { 1.0f, 0 };
+		cvs.push_back(offScreenClearDepth);
+
+		offScreenRenderPassBeginInfo.clearValueCount = static_cast<uint32_t>(cvs.size());
+		offScreenRenderPassBeginInfo.pClearValues = cvs.data();
+
+		for (int i = 0; i < 6; i++) {
+
+			Wrapper::CommandBuffer::Ptr mCommandBuffer = Wrapper::CommandBuffer::create(mDevice, mCommandPool);
+
+
+			mNVPMatrices.mViewMatrix = gCaptureCameras[i].getViewMatrix();
+			mNVPMatrices.mProjectionMatrix = gCaptureCameras[i].getProjectMatrix();
+			mNVPMatrices.mNormalMatrix = glm::transpose(glm::inverse(mNVPMatrices.mViewMatrix));
+			mCameraParameters.CameraWorldPosition = gCaptureCameras[i].getCamPosition();
+
+			mOffscreenSphereNode->mUniformManager->updateUniformBuffer(mNVPMatrices, mOffscreenSphereNode->mModels[0]->getUniform(), mCameraParameters, 0);
+
+
+			mCommandBuffer->beginCommandBuffer(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+
+			// Begin offscreen render pass
+			mCommandBuffer->beginRenderPass(offScreenRenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+			mCommandBuffer->bindGraphicPipeline(mOffscreenPipeline->getPipeline());
+			std::vector<VkDescriptorSet> offscreenDescriptorSets = { mOffscreenSphereNode->mUniformManager->getDescriptorSet(0) , mOffscreenSphereNode->mMaterial->getDescriptorSet(0) };
+			mCommandBuffer->bindDescriptorSets(mOffscreenPipeline->getPipeline()->getPipelineLayout(), 0, offscreenDescriptorSets.size(), offscreenDescriptorSets.data());
+
+			mOffscreenSphereNode->draw(mCommandBuffer);
+			mCommandBuffer->endRenderPass();
+
+			// Copy the rendered image to the cubemap image
+			mCommandBuffer->CopyRTImageToCubeMap(
+				mOffscreenRenderTarget->getRenderTargetImages()[0]->getImage(),
+				diffuseIrradianceCubMapImage->getImage(),
+				texWidth, texHeight, i, 0);
+
+
+			mCommandBuffer->endCommandBuffer();
+			// Submit the command buffer
+			mCommandBuffer->submitCommandBuffer(mDevice->getGraphicQueue());
+			// Wait for the command buffer to finish
+			mCommandBuffer->waitCommandBuffer(mDevice->getGraphicQueue());
+
+		}
+
+
+	}
+
+	Wrapper::Image::Ptr HDRI::generateDiffuseIrradianceMap(
+		Wrapper::Image::Ptr hdriCubMapImage,
+		const Wrapper::Device::Ptr& device,
+		const Wrapper::CommandPool::Ptr& commandPool,
+		uint32_t texWidth, uint32_t texHeight,
+		std::string inVertShaderPath, std::string inFragShaderPath) {
+
+		// Create the diffuse irradiance map image
+		Wrapper::Image::Ptr mImage = Wrapper::Image::create(
+			mDevice, texWidth, texHeight,
+			VK_FORMAT_R32G32B32A32_SFLOAT,
+			VK_IMAGE_TYPE_2D,
+			VK_IMAGE_TILING_OPTIMAL,
+			VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+			VK_SAMPLE_COUNT_1_BIT,
+			VK_IMAGE_ASPECT_COLOR_BIT, true);
+
+		// Set the image layout for transfer
+		VkImageSubresourceRange subresourceRange{};
+		subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		subresourceRange.baseMipLevel = 0;
+		subresourceRange.levelCount = 1;
+		subresourceRange.baseArrayLayer = 0;
+		subresourceRange.layerCount = 6; // Cubemap has 6 faces
+
+		mImage->setImageLayout(
+			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+			VK_PIPELINE_STAGE_TRANSFER_BIT,
+			subresourceRange,
+			mCommandPool);
+
+
+		// Load the HDR image data
+		captureDiffuseIrradianceMap(
+			hdriCubMapImage,
+			mImage,
+			texWidth, texHeight,
+			inVertShaderPath, inFragShaderPath);
+
+		mImage->setImageLayout(
+			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+			VK_PIPELINE_STAGE_TRANSFER_BIT,
+			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+			subresourceRange,
+			mCommandPool);
+
+		return mImage;
+	}
+
+
+	void HDRI::captureSpecularPrefilterMap(
+		Wrapper::Image::Ptr& hdriCubMapImage,
+		Wrapper::Image::Ptr& specularPrefilterCubMapImage,
+		uint32_t texWidth, uint32_t texHeight,
+		std::string inVertShaderPath,
+		std::string inFragShaderPath) {
+
+		OffscreenSceneNode::Ptr mOffscreenSphereNode{ nullptr };
+
+
+		Model::Ptr skyboxModel = Model::create(mDevice);
+		skyboxModel->loadBattleFireComponent("assets/skybox.staticmesh", mDevice);
+		mOffscreenSphereNode = OffscreenSceneNode::create();
+		mOffscreenSphereNode->mUniformManager = UniformManager::create();
+		mOffscreenSphereNode->mUniformManager->init(mDevice, mCommandPool, 1);
+		mOffscreenSphereNode->mUniformManager->attachCubeMap(hdriCubMapImage);
+		mOffscreenSphereNode->mUniformManager->build();
+		mOffscreenSphereNode->mModels.push_back(skyboxModel);
+		mOffscreenSphereNode->mModels[0]->setModelMatrix(glm::mat4(1.0f));
+		std::vector<std::string> textureFiles;
+		textureFiles.push_back("assets/book.jpg");
+		textureFiles.push_back("assets/diffuse.jpg");
+		textureFiles.push_back("assets/metal.jpg");
+		mOffscreenSphereNode->mMaterial = Material::create();
+		mOffscreenSphereNode->mMaterial->attachTexturePaths(textureFiles);
+		mOffscreenSphereNode->mMaterial->init(mDevice, mCommandPool, 1);
+
+		gCaptureCameras[3].lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f));
+		gCaptureCameras[2].lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+
+		auto layout0 = mOffscreenSphereNode->mUniformManager->getDescriptorLayout()->getLayout();
+		auto layout1 = mOffscreenSphereNode->mMaterial->getDescriptorLayout()->getLayout();
+
+		for (int mipmapLevel = 0; mipmapLevel < 5; mipmapLevel++) {
+
+			uint32_t mipWidth = static_cast<float>(texWidth * std::pow(0.5f, mipmapLevel));
+			uint32_t mipHeight = static_cast<float>(texHeight * std::pow(0.5f, mipmapLevel));
+			float roughness = static_cast<float>(mipmapLevel) / 4.0f; // Roughness ranges from 0 to 1
+
+			// create offscreen render target for each mipmap level
+			OffscreenRenderTarget::Ptr mOffscreenRenderTarget = OffscreenRenderTarget::create(
+				mDevice, mCommandPool,
+				mipWidth, mipHeight,
+				1,
+				VK_FORMAT_R32G32B32A32_SFLOAT,// Color format
+				VK_FORMAT_D24_UNORM_S8_UINT,
+				VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL
+			);
+
+			PushConstantManager::Ptr mPushConstantManager = PushConstantManager::create();
+			mPushConstantManager->init();
+			mPushConstantManager->updateConstantData(
+				glm::vec4(0.0f, 0.0f, 0.0f, roughness), // Roughness offset
+				glm::vec4(0.0f, 0.0f, 0.0f, 0.0f), // Unused offsets
+				glm::vec4(0.0f, 0.0f, 0.0f, 0.0f) // Unused offsets
+			);
+			mPushConstantManager->setConstantStageFlags(VK_SHADER_STAGE_FRAGMENT_BIT);
+			std::vector<VkPushConstantRange> pushConstantRange = { mPushConstantManager->getPushConstantRanges()->getPushConstantRange() };
+			// create offscreen pipeline for each mipmap level
+			OffscreenPipeline::Ptr mOffscreenPipeline = OffscreenPipeline::create(mDevice);
+			mOffscreenPipeline->build(
+				mOffscreenRenderTarget->getRenderPass(),
+				mipWidth, mipHeight,
+				inVertShaderPath, inFragShaderPath,
+				{ layout0, layout1 },
+				mOffscreenSphereNode->mModels[0]->getVertexInputBindingDescriptions(),
+				mOffscreenSphereNode->mModels[0]->getAttributeDescriptions(),
+				&pushConstantRange,
+				mDevice->getMaxUsableSampleCount(),
+				VK_FRONT_FACE_COUNTER_CLOCKWISE,
+				false,
+				false
+			);
+
+			VkRenderPassBeginInfo offScreenRenderPassBeginInfo{};
+			offScreenRenderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+			offScreenRenderPassBeginInfo.renderPass = mOffscreenRenderTarget->getRenderPass()->getRenderPass();
+			offScreenRenderPassBeginInfo.framebuffer = mOffscreenRenderTarget->getOffScreenFramebuffers()[0];
+			offScreenRenderPassBeginInfo.renderArea.offset = { 0, 0 };
+			offScreenRenderPassBeginInfo.renderArea.extent = { static_cast<uint32_t>(mipWidth), static_cast<uint32_t>(mipHeight) };
+			std::vector<VkClearValue> cvs;
+			//0: final output color attachment 1:multisample image 2: depth attachment
+			VkClearValue offScreenClearFinalColor{};
+			offScreenClearFinalColor.color = { 0.0f, 0.0f, 0.0f, 0.0f };
+			cvs.push_back(offScreenClearFinalColor);
+
+			//1: Multisample image
+			VkClearValue offScreenClearMultiSample{};
+			offScreenClearMultiSample.color = { 0.0f, 0.0f, 0.0f, 0.0f };
+			cvs.push_back(offScreenClearMultiSample);
+
+			//2: Depth attachment
+			VkClearValue offScreenClearDepth{};
+			offScreenClearDepth.depthStencil = { 1.0f, 0 };
+			cvs.push_back(offScreenClearDepth);
+
+			offScreenRenderPassBeginInfo.clearValueCount = static_cast<uint32_t>(cvs.size());
+			offScreenRenderPassBeginInfo.pClearValues = cvs.data();
+
+			for (int i = 0; i < 6; i++) {
+
+
+
+				Wrapper::CommandBuffer::Ptr mCommandBuffer = Wrapper::CommandBuffer::create(mDevice, mCommandPool);
+
+				mNVPMatrices.mViewMatrix = gCaptureCameras[i].getViewMatrix();
+				mNVPMatrices.mProjectionMatrix = gCaptureCameras[i].getProjectMatrix();
+				mNVPMatrices.mNormalMatrix = glm::transpose(glm::inverse(mNVPMatrices.mViewMatrix));
+				mCameraParameters.CameraWorldPosition = gCaptureCameras[i].getCamPosition();
+
+				mOffscreenSphereNode->mUniformManager->updateUniformBuffer(mNVPMatrices, mOffscreenSphereNode->mModels[0]->getUniform(), mCameraParameters, 0);
+
+
+				mCommandBuffer->beginCommandBuffer(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+
+				// Begin offscreen render pass
+				mCommandBuffer->beginRenderPass(offScreenRenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+				mCommandBuffer->bindGraphicPipeline(mOffscreenPipeline->getPipeline());
+				std::vector<VkDescriptorSet> offscreenDescriptorSets = { mOffscreenSphereNode->mUniformManager->getDescriptorSet(0) , mOffscreenSphereNode->mMaterial->getDescriptorSet(0) };
+				mCommandBuffer->bindDescriptorSets(mOffscreenPipeline->getPipeline()->getPipelineLayout(), 0, offscreenDescriptorSets.size(), offscreenDescriptorSets.data());
+				mCommandBuffer->pushConstants(mOffscreenPipeline->getPipeline()->getPipelineLayout(), mPushConstantManager->getConstantParam().stageFlags,
+					mPushConstantManager->getConstantParam().offset, mPushConstantManager->getConstantParam().size, &mPushConstantManager->getConstantData());
+
+				mOffscreenSphereNode->draw(mCommandBuffer);
+				mCommandBuffer->endRenderPass();
+
+				// Copy the rendered image to the cubemap image
+				mCommandBuffer->CopyRTImageToCubeMap(
+					mOffscreenRenderTarget->getRenderTargetImages()[0]->getImage(),
+					specularPrefilterCubMapImage->getImage(),
+					mipWidth, mipHeight, i, mipmapLevel);
+
+
+				mCommandBuffer->endCommandBuffer();
+				// Submit the command buffer
+				mCommandBuffer->submitCommandBuffer(mDevice->getGraphicQueue());
+				// Wait for the command buffer to finish
+				mCommandBuffer->waitCommandBuffer(mDevice->getGraphicQueue());
+
+			}
+		}
+
+	}
+
+	Wrapper::Image::Ptr HDRI::generateSpecularPrefilterMap(
+		Wrapper::Image::Ptr hdriCubMapImage,
+		const Wrapper::Device::Ptr& device,
+		const Wrapper::CommandPool::Ptr& commandPool,
+		uint32_t texWidth, uint32_t texHeight,
+		std::string inVertShaderPath, std::string inFragShaderPath) {
+		// Create the specular prefilter map image
+		Wrapper::Image::Ptr mImage = Wrapper::Image::create(
+			mDevice, texWidth, texHeight,
+			VK_FORMAT_R32G32B32A32_SFLOAT,
+			VK_IMAGE_TYPE_2D,
+			VK_IMAGE_TILING_OPTIMAL,
+			VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+			VK_SAMPLE_COUNT_1_BIT,
+			VK_IMAGE_ASPECT_COLOR_BIT, true, 5);// 5 mip levels for prefiltering
+		// Set the image layout for transfer
+		VkImageSubresourceRange subresourceRange{};
+		subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		subresourceRange.baseMipLevel = 0;
+		subresourceRange.levelCount = 5;
+		subresourceRange.baseArrayLayer = 0;
+		subresourceRange.layerCount = 6; // Cubemap has 6 faces
+
+		mImage->setImageLayout(
+			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+			VK_PIPELINE_STAGE_TRANSFER_BIT,
+			subresourceRange,
+			mCommandPool);
+		captureSpecularPrefilterMap(hdriCubMapImage, mImage, texWidth, texHeight, inVertShaderPath, inFragShaderPath);
+
+		mImage->setImageLayout(
+			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+			VK_PIPELINE_STAGE_TRANSFER_BIT,
+			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+			subresourceRange,
+			mCommandPool);
+		return mImage;
+	}
+
+	Wrapper::Image::Ptr HDRI::generateBRDFLUT(
+		const Wrapper::Device::Ptr& device,
+		const Wrapper::CommandPool::Ptr& commandPool,
+		uint32_t texWidth, uint32_t texHeight,
+		std::string inVertShaderPath, std::string inFragShaderPath) {
+		// Create the BRDF LUT image
+		Wrapper::Image::Ptr mImage = Wrapper::Image::create(
+			mDevice, texWidth, texHeight,
+			VK_FORMAT_R32G32B32A32_SFLOAT,
+			VK_IMAGE_TYPE_2D,
+			VK_IMAGE_TILING_OPTIMAL,
+			VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+			VK_SAMPLE_COUNT_1_BIT,
+			VK_IMAGE_ASPECT_COLOR_BIT);
+
+		// Set the image layout for transfer
+		VkImageSubresourceRange subresourceRange{};
+		subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		subresourceRange.baseMipLevel = 0;
+		subresourceRange.levelCount = 1;
+		subresourceRange.baseArrayLayer = 0;
+		subresourceRange.layerCount = 1; 
+
+		mImage->setImageLayout(
+			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+			VK_PIPELINE_STAGE_TRANSFER_BIT,
+			subresourceRange,
+			mCommandPool);
+
+		OffscreenRenderTarget::Ptr mOffscreenRenderTarget{ nullptr };
+		OffscreenPipeline::Ptr mOffscreenPipeline{ nullptr };
+		OffscreenSceneNode::Ptr mOffscreenSphereNode{ nullptr };
+
+
+		mOffscreenRenderTarget = OffscreenRenderTarget::create(
+			mDevice, mCommandPool,
+			texWidth, texHeight,
+			1,
+			VK_FORMAT_R32G32B32A32_SFLOAT, // Color format
+			VK_FORMAT_D24_UNORM_S8_UINT, // Depth format
+			VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL // Final layout for the offscreen render target, copy from render target to cubemap image, need to be VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL
+		);
+
+		Model::Ptr skyboxModel = Model::create(mDevice);
+		skyboxModel->loadBattleFireComponent("assets/skybox.staticmesh", mDevice);
+
+		mOffscreenSphereNode = OffscreenSceneNode::create();
+		mOffscreenSphereNode->mUniformManager = UniformManager::create();
+		mOffscreenSphereNode->mUniformManager->init(mDevice, mCommandPool, 1);
+		mOffscreenSphereNode->mUniformManager->build();
+		mOffscreenSphereNode->mModels.push_back(skyboxModel);
+		mOffscreenSphereNode->mModels[0]->setModelMatrix(glm::mat4(1.0f));
+
+		std::vector<std::string> textureFiles;
+		textureFiles.push_back("assets/book.jpg");
+		textureFiles.push_back("assets/diffuse.jpg");
+		textureFiles.push_back("assets/metal.jpg");
+		mOffscreenSphereNode->mMaterial = Material::create();
+		mOffscreenSphereNode->mMaterial->attachTexturePaths(textureFiles);
+		mOffscreenSphereNode->mMaterial->init(mDevice, mCommandPool, 1);
+		//mOffscreenSphereNode->mMaterial->attachImages({ inCubMapImage });
+
+		mOffscreenPipeline = OffscreenPipeline::create(mDevice);
+		mOffscreenPipeline->buildScreenQuadPipeline(
+			mOffscreenRenderTarget->getRenderPass(),
+			texWidth, texHeight,
+			inVertShaderPath, inFragShaderPath,
+			{ mOffscreenSphereNode->mUniformManager->getDescriptorLayout()->getLayout(), mOffscreenSphereNode->mMaterial->getDescriptorLayout()->getLayout() },
+			nullptr, // No push constants
+			mDevice->getMaxUsableSampleCount(),
+			VK_FRONT_FACE_CLOCKWISE,
+			false);
+
+
+		VkRenderPassBeginInfo offScreenRenderPassBeginInfo{};
+		offScreenRenderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+		offScreenRenderPassBeginInfo.renderPass = mOffscreenRenderTarget->getRenderPass()->getRenderPass();
+		offScreenRenderPassBeginInfo.framebuffer = mOffscreenRenderTarget->getOffScreenFramebuffers()[0];
+		offScreenRenderPassBeginInfo.renderArea.offset = { 0, 0 };
+		offScreenRenderPassBeginInfo.renderArea.extent = { static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight) };
+		std::vector<VkClearValue> cvs;
+		//0: final output color attachment 1:multisample image 2: depth attachment
+		VkClearValue offScreenClearFinalColor{};
+		offScreenClearFinalColor.color = { 0.0f, 0.0f, 0.0f, 0.0f };
+		cvs.push_back(offScreenClearFinalColor);
+
+		//1: Multisample image
+		VkClearValue offScreenClearMultiSample{};
+		offScreenClearMultiSample.color = { 0.0f, 0.0f, 0.0f, 0.0f };
+		cvs.push_back(offScreenClearMultiSample);
+
+		//2: Depth attachment
+		VkClearValue offScreenClearDepth{};
+		offScreenClearDepth.depthStencil = { 1.0f, 0 };
+		cvs.push_back(offScreenClearDepth);
+
+		offScreenRenderPassBeginInfo.clearValueCount = static_cast<uint32_t>(cvs.size());
+		offScreenRenderPassBeginInfo.pClearValues = cvs.data();
+
+
+		Wrapper::CommandBuffer::Ptr mCommandBuffer = Wrapper::CommandBuffer::create(mDevice, mCommandPool);
+
+		mNVPMatrices.mViewMatrix = gCaptureCameras[0].getViewMatrix();
+		mNVPMatrices.mProjectionMatrix = gCaptureCameras[0].getProjectMatrix();
+		mNVPMatrices.mNormalMatrix = glm::transpose(glm::inverse(mNVPMatrices.mViewMatrix));
+		mCameraParameters.CameraWorldPosition = gCaptureCameras[0].getCamPosition();
+
+		mOffscreenSphereNode->mUniformManager->updateUniformBuffer(mNVPMatrices, mOffscreenSphereNode->mModels[0]->getUniform(), mCameraParameters, 0);
+
+		mCommandBuffer->beginCommandBuffer(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+
+		// Begin offscreen render pass
+		mCommandBuffer->beginRenderPass(offScreenRenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+		mCommandBuffer->bindGraphicPipeline(mOffscreenPipeline->getPipeline());
+		std::vector<VkDescriptorSet> offscreenDescriptorSets = { mOffscreenSphereNode->mUniformManager->getDescriptorSet(0) , mOffscreenSphereNode->mMaterial->getDescriptorSet(0) };
+		mCommandBuffer->bindDescriptorSets(mOffscreenPipeline->getPipeline()->getPipelineLayout(), 0, offscreenDescriptorSets.size(), offscreenDescriptorSets.data());
+
+		mOffscreenSphereNode->draw(mCommandBuffer);
+		mCommandBuffer->endRenderPass();
+		// Copy the rendered image to the cubemap image
+		mCommandBuffer->CopyImageToImage(
+			mOffscreenRenderTarget->getRenderTargetImages()[0]->getImage(),
+			mImage->getImage(),
+			texWidth, texHeight, 0);
+
+		mCommandBuffer->endCommandBuffer();
+		// Submit the command buffer
+		mCommandBuffer->submitCommandBuffer(mDevice->getGraphicQueue());
+		// Wait for the command buffer to finish
+		mCommandBuffer->waitCommandBuffer(mDevice->getGraphicQueue());
+
+		// Set the image layout for shader read
 		mImage->setImageLayout(
 			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 			VK_PIPELINE_STAGE_TRANSFER_BIT,

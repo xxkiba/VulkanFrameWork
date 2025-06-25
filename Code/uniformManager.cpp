@@ -88,6 +88,23 @@ void UniformManager::attachCubeMap(Wrapper::Image::Ptr& inImage) {
 	mUniformParameters.push_back(textureParam);
 }
 
+void UniformManager::attachImage(Wrapper::Image::Ptr& inImage) {
+	auto textureParam = Wrapper::UniformParameter::create();
+	textureParam->mBinding = mUniformParameters.size(); // Use the next binding index
+	textureParam->mDescriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	textureParam->mCount = 1;
+	textureParam->mStageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+	auto image2DSampler = Wrapper::Sampler::create(mDevice);
+
+	textureParam->mTextures.resize(mFrameCount); // Resize to frameCount, each frame will have its own textures
+	for (int i = 0; i < mFrameCount; i++) {
+
+		auto tex = Texture::createFromImage(mDevice, inImage, image2DSampler);
+		textureParam->mTextures[i].push_back(tex);
+	}
+	mUniformParameters.push_back(textureParam);
+}
+
 void UniformManager::build() {
 	mDescriptorLayout = Wrapper::DescriptorSetLayout::create(mDevice);
 	mDescriptorLayout->build(mUniformParameters);

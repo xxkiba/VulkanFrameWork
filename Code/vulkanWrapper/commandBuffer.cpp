@@ -152,6 +152,32 @@ namespace FF::Wrapper {
 			&copyRegion);
 	}
 
+	void CommandBuffer::CopyImageToImage(const VkImage& inSrcImage, VkImage inDstImage, size_t inWidth, size_t inHeight, int inMipmapLevel) {
+		VkImageSubresourceRange subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT ,0,1,0,1 };
+		VkImageCopy copyRegion = {};
+		copyRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		copyRegion.srcSubresource.baseArrayLayer = 0;
+		copyRegion.srcSubresource.mipLevel = 0;
+		copyRegion.srcSubresource.layerCount = 1;
+		copyRegion.srcOffset = { 0, 0, 0 };
+		copyRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		copyRegion.dstSubresource.baseArrayLayer = 0;
+		copyRegion.dstSubresource.mipLevel = inMipmapLevel;
+		copyRegion.dstSubresource.layerCount = 1;
+		copyRegion.dstOffset = { 0, 0, 0 };
+		copyRegion.extent.width = static_cast<uint32_t>(inWidth);
+		copyRegion.extent.height = static_cast<uint32_t>(inHeight);
+		copyRegion.extent.depth = 1;
+		vkCmdCopyImage(
+			mCommandBuffer,
+			inSrcImage,
+			VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+			inDstImage,
+			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			1,
+			&copyRegion);
+	}
+
 	void CommandBuffer::submitCommandBuffer(VkQueue queue, VkFence fence) {
 		if (fence == VK_NULL_HANDLE) {
 			VkFenceCreateInfo fenceInfo{};
