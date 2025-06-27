@@ -22,7 +22,9 @@ namespace FF {
     }
 
     void OffscreenRenderTarget::cleanup() {
-		mOffScreenFramebuffers.clear();
+        for (auto& framebuffer : mOffScreenFramebuffers) {
+            vkDestroyFramebuffer(mDevice->getDevice(), framebuffer, nullptr); // Destroy the framebuffers
+        }
 		mRenderPass.reset();
         mDepthAttachment.reset();
         mClearValues.clear();

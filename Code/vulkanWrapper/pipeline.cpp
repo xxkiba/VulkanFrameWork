@@ -17,6 +17,7 @@ namespace FF::Wrapper {
 		}
 		mShaders.clear();
 		mDevice.reset();
+		mRenderPass.reset();
 	}
 	void Pipeline::setShaderGroup(const std::vector<Shader::Ptr>& shaderGroup) {
 		mShaders = shaderGroup;

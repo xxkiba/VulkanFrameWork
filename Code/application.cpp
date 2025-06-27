@@ -868,6 +868,7 @@ namespace FF {
 		}
 	}
 
+
 	void Application::createSyncObjects() {
 		for (int i = 0; i < mSwapChain->getImageCount(); i++) {
 			mImageAvailableSemaphores.push_back(Wrapper::Semaphore::create(mDevice));
@@ -899,15 +900,16 @@ namespace FF {
 			VK_NULL_HANDLE,
 			&imageIndex);
 
-		if (result == VK_ERROR_OUT_OF_DATE_KHR) {
+		if (result == VK_ERROR_OUT_OF_DATE_KHR || mWindow->mWindowResized || result == VK_SUBOPTIMAL_KHR) {
 			recreateSwapChain();
 			mWindow->mWindowResized = false;
+			return;
 		}
-		else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
+		else if (result != VK_SUCCESS) {
 			throw std::runtime_error("Error: failed to acquire swap chain image!");
 		}
 
-
+		//recordCommandBuffer(imageIndex);
 
 		// Submit the command buffer to the queue
 		VkSubmitInfo submitInfo{};
@@ -954,6 +956,7 @@ namespace FF {
 		if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || mWindow->mWindowResized) {
 			recreateSwapChain();
 			mWindow->mWindowResized = false;
+			return;
 		}else if (result != VK_SUCCESS) {
 			throw std::runtime_error("Error: failed to present swap chain image!");
 		}

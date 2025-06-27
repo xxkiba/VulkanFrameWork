@@ -55,6 +55,9 @@ namespace FF::Wrapper {
 			vkDestroyRenderPass(mDevice->getDevice(), mRenderPass, nullptr);
 			mRenderPass = VK_NULL_HANDLE;
 		}
+		mAttachmentDescriptions.clear();
+		mSubPasses.clear();
+		mDependencies.clear();
 		mDevice.reset();
 	}
 	void RenderPass::addAttachment(const VkAttachmentDescription& attachmentDescription) {
