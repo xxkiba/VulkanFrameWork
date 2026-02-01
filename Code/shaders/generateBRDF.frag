@@ -61,7 +61,7 @@ vec2 GenerateBRDF(float inNDotV,float inRoughness){
             float Gv=Geometry(inNDotV,inRoughness);
             float Gl=Geometry(NDotL,inRoughness);
             float G=Gv*Gl;
-            float Vis=(G*NDotL)/(NDotH*inNDotV);
+            float Vis=(G*NDotL)/(NDotH*inNDotV);// Certain form of Kernal K
             float f=pow(1.0-HDotV,5.0);
             float scale=(1.0-f)*Vis;
             float bias=f*Vis;

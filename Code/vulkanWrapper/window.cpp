@@ -6,7 +6,7 @@ namespace FF::Wrapper {
 
 	static void windowResized(GLFWwindow* window, int width, int height) {
 		auto pUserData = reinterpret_cast<Window*>(glfwGetWindowUserPointer(window));
-		pUserData->mWindowResized = true;
+		pUserData->mWindowResized = true; 
 	}
 
 
@@ -25,10 +25,12 @@ namespace FF::Wrapper {
 	{
 		mWidth = width;
 		mHeight = height;
-		glfwInit();
+		glfwInit(); // Init glfw, once per application
 
 		// Set environment, close opengl API 
 		glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+
+		// Allow window resize
 		glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 
 		mWindow = glfwCreateWindow(mWidth, mHeight, "vulkan window", nullptr, nullptr);

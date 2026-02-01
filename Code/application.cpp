@@ -548,8 +548,8 @@ namespace FF {
 		auto swapChainRenderPass = Wrapper::RenderPass::create(mDevice);
 		// Create a render pass
 		// 
-		// 0: Final output color attachment
-		// 1: Resolve image(MultiSample)
+		// 0: Final output color attachment -> PRESENT
+		// 1: Resolve image(MultiSample) (render here)
 		// 2: Depth attachment
 
 		// 0: Final output color attachment, created by the swap chain, target of resolve operation, is also the target to be set in subpass

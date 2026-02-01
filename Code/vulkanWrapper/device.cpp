@@ -184,7 +184,8 @@ namespace FF::Wrapper {
 			deviceCreateInfo.ppEnabledLayerNames = validationLayers.data();
 		}
 		else {
-			deviceCreateInfo.enabledExtensionCount = 0;
+			deviceCreateInfo.enabledLayerCount = 0;
+			deviceCreateInfo.ppEnabledLayerNames = nullptr;
 		}
 
 		if (vkCreateDevice(mPhysicalDevice, &deviceCreateInfo, nullptr, &mDevice) != VK_SUCCESS) {
