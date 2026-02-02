@@ -1,9 +1,12 @@
 #include "sampler.h"
 
 namespace FF::Wrapper {
-	Sampler::Sampler(const Device::Ptr& device, bool isCubeMap)
+	Sampler::Sampler(const Device::Ptr& device, bool isCubeMap, bool isRepeat)
 		: mDevice(device) {
-		createSampler(VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,isCubeMap);
+		if(isRepeat)
+			createSampler(VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT,isCubeMap);
+		else
+			createSampler(VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,isCubeMap);
 	}
 	Sampler::~Sampler() {
 		if (mSampler != VK_NULL_HANDLE) {

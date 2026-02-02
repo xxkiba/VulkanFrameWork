@@ -132,6 +132,25 @@ namespace FF {
 		mOffscreenSphereNode->mUniformManager->attachCubeMap(specularPrefilterMap);
 		mOffscreenSphereNode->mUniformManager->attachCubeMap(diffuseIrradianceMap);
 		mOffscreenSphereNode->mUniformManager->attachImage(brdfLUT);
+
+		//Helmet Images
+		Wrapper::Image::Ptr Albedo = Wrapper::Image::createFromFile(mDevice, mCommandPool,"assets/DamagedHelmet/Albedo.jpg",VK_FORMAT_R8G8B8A8_UNORM);
+		Wrapper::Image::Ptr Normal = Wrapper::Image::createFromFile(mDevice, mCommandPool, "assets/DamagedHelmet/Normal.jpg", VK_FORMAT_R8G8B8A8_UNORM);
+		Wrapper::Image::Ptr Metallic = Wrapper::Image::createFromFile(mDevice, mCommandPool, "assets/DamagedHelmet/Metallic.png", VK_FORMAT_R8G8B8A8_UNORM);
+		Wrapper::Image::Ptr Roughness = Wrapper::Image::createFromFile(mDevice, mCommandPool, "assets/DamagedHelmet/Roughness.png", VK_FORMAT_R8G8B8A8_UNORM);
+		Wrapper::Image::Ptr AO = Wrapper::Image::createFromFile(mDevice, mCommandPool, "assets/DamagedHelmet/AO.jpg", VK_FORMAT_R8G8B8A8_UNORM);
+		Wrapper::Image::Ptr Emissive = Wrapper::Image::createFromFile(mDevice, mCommandPool, "assets/DamagedHelmet/Emissive.jpg", VK_FORMAT_R8G8B8A8_UNORM);
+
+		//Helmet Images
+		mOffscreenSphereNode->mUniformManager->attachMapImage(Albedo);
+		mOffscreenSphereNode->mUniformManager->attachMapImage(Normal);
+		mOffscreenSphereNode->mUniformManager->attachMapImage(Emissive);
+		mOffscreenSphereNode->mUniformManager->attachMapImage(AO);
+		mOffscreenSphereNode->mUniformManager->attachMapImage(Metallic);
+		mOffscreenSphereNode->mUniformManager->attachMapImage(Roughness);
+
+	
+
 		mOffscreenSphereNode->mUniformManager->build();
 
 
@@ -164,11 +183,12 @@ namespace FF {
 		Model::Ptr offscreenModel = Model::create(mDevice);
 		Model::Ptr skyboxModel = Model::create(mDevice);
 		if (useBattleFirePipeline) {
-			commonModel->loadBattleFireModel("assets/Sphere.rhsm", mDevice);
+			// Didn't really draw the sphere here, just need to load a model to make code work.
+			commonModel->loadModel("assets/book.obj", mDevice);
 			mSphereNode->mModels.push_back(commonModel);
 			mSphereNode->mModels[0]->setModelMatrix(glm::mat4(1.0f));
 
-			offscreenModel->loadBattleFireModel("assets/Sphere.rhsm", mDevice);
+			offscreenModel->loadBattleFireModel("assets/DamagedHelmet.staticmesh", mDevice);
 			mOffscreenSphereNode->mModels.push_back(offscreenModel);
 			mOffscreenSphereNode->mModels[0]->setModelMatrix(glm::mat4(1.0f));
 
@@ -176,7 +196,7 @@ namespace FF {
 			mSkyBoxNode->mModels.push_back(skyboxModel);
 			mSkyBoxNode->mModels[0]->setModelMatrix(glm::mat4(1.0f));
 
-			mPipeline = createPipeline("shaders/testVs.spv", "shaders/testFs.spv");
+			mPipeline = createPipeline("shaders/pbr1Vert.spv", "shaders/pbr1Frag.spv");
 		}
 		else {
 			commonModel->loadModel("assets/book.obj", mDevice);

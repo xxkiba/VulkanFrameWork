@@ -19,4 +19,7 @@ C:\VulkanSDK\1.3.296.0\Bin\glslangValidator.exe -V CaptureSpecularPrefilter.frag
 
 C:\VulkanSDK\1.3.296.0\Bin\glslangValidator.exe -V generateBRDF.frag -o generateBRDFFrag.spv
 
+C:\VulkanSDK\1.3.296.0\Bin\glslangValidator.exe -V pbr1.vert -o pbr1Vert.spv
+C:\VulkanSDK\1.3.296.0\Bin\glslangValidator.exe -V pbr1.frag -o pbr1Frag.spv
+
 pause

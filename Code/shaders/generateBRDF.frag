@@ -36,7 +36,7 @@ vec3 ImportanceSampleGGX(vec2 inXi,vec3 inN,float inRoughness){
     vec3 Y=normalize(cross(inN,X));
 
     vec3 HFinal=X*H.x+Y*H.y+inN*H.z;
-    return HFinal;
+    return normalize(HFinal);
 }
 float Geometry(float inNDotX,float inRoughness){
     float k=pow(inRoughness,2.0)/2.0;

@@ -24,6 +24,15 @@ namespace FF::Wrapper {
 			const int& height,
 			VkFormat format);
 
+		static Image::Ptr createFromFile(
+			const Device::Ptr& device,
+			const CommandPool::Ptr& commandPool,
+			const std::string& filePath,
+			VkFormat format = VK_FORMAT_R8G8B8A8_UNORM,
+			bool flipVertically = false
+		);
+
+
 		static VkFormat findDepthFormat(const Device::Ptr &device) {
 			std::vector<VkFormat> depthFormats = {
 				VK_FORMAT_D32_SFLOAT,

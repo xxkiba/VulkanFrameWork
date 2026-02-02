@@ -1,5 +1,5 @@
 #include "image.h"
-
+#include "../stb_image.h"
 namespace FF::Wrapper {
 
 	Image::Ptr Image::createDepthImage(const Device::Ptr& device, const int& width, const int& height) {
@@ -38,6 +38,72 @@ namespace FF::Wrapper {
 			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,//If transient is used, need to use VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT
 			device->getMaxUsableSampleCount(),
 			VK_IMAGE_ASPECT_COLOR_BIT);
+	}
+
+	Image::Ptr Image::createFromFile(
+		const Device::Ptr& device,
+		const CommandPool::Ptr& commandPool,
+		const std::string& filePath,
+		VkFormat format,
+		bool flipVertically
+	) {
+		int texWidth = 0, texHeight = 0, texChannels = 0;
+
+		stbi_set_flip_vertically_on_load(flipVertically ? 1 : 0);
+
+		stbi_uc* pixels = stbi_load(filePath.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+		if (!pixels || texWidth <= 0 || texHeight <= 0) {
+			throw std::runtime_error("Image::createFromFile failed to load image or invalid dimensions! Path: " + filePath);
+		}
+
+		const VkDeviceSize imageSize = static_cast<VkDeviceSize>(texWidth) * texHeight * 4; // STBI_rgb_alpha => RGBA8
+
+		// create MapImage
+		auto img = Image::create(
+			device,
+			texWidth,
+			texHeight,
+			format,
+			VK_IMAGE_TYPE_2D,
+			VK_IMAGE_TILING_OPTIMAL,
+			VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+			VK_SAMPLE_COUNT_1_BIT,
+			VK_IMAGE_ASPECT_COLOR_BIT,
+			false,   // isCubeMap
+			1        // mipmapLevels
+		);
+
+		VkImageSubresourceRange subresourceRange{};
+		subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		subresourceRange.baseMipLevel = 0;
+		subresourceRange.levelCount = 1;
+		subresourceRange.baseArrayLayer = 0;
+		subresourceRange.layerCount = 1;
+
+		// UNDEFINED -> TRANSFER_DST
+		img->setImageLayout(
+			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+			VK_PIPELINE_STAGE_TRANSFER_BIT,
+			subresourceRange,
+			commandPool
+		);
+
+		// copy staging -> image
+		img->fillImageData(static_cast<size_t>(imageSize), pixels, commandPool, false);
+
+		// TRANSFER_DST -> SHADER_READ_ONLY
+		img->setImageLayout(
+			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+			VK_PIPELINE_STAGE_TRANSFER_BIT,
+			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+			subresourceRange,
+			commandPool
+		);
+
+		stbi_image_free(pixels);
+		return img;
 	}
 
 	Image::Image(const Device::Ptr& device,

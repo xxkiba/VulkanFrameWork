@@ -66,7 +66,7 @@ namespace FF {
 
 		mVertexDataBuffer = Wrapper::Buffer::createVertexBuffer(device, mVertexDatas.size() * sizeof(StaticMeshVertexData), mVertexDatas.data());
 
-		mIndexBuffer = Wrapper::Buffer::createIndexBuffer(device, mIndexDatas.size() * sizeof(float), mIndexDatas.data());
+		mIndexBuffer = Wrapper::Buffer::createIndexBuffer(device, mIndexDatas.size() * sizeof(unsigned int), mIndexDatas.data());
 
 		setVertexInputBindingDescriptions();
 		setAttributeDescription();
