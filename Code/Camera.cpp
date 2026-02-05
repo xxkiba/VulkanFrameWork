@@ -9,7 +9,7 @@ void Camera::lookAt(glm::vec3 _pos, glm::vec3 _target, glm::vec3 _up)
 	glm::vec3 right = glm::normalize(glm::cross(m_front, _up));
 	m_up = glm::normalize(glm::cross(right, m_front));
 
-	m_vMatrix = glm::lookAt(m_position, m_front, m_up);
+	m_vMatrix = glm::lookAt(m_position, m_position + m_front, m_up);
 }
 
 void Camera::update()

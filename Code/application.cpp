@@ -759,7 +759,7 @@ namespace FF {
 			mNVPMatrices.mProjectionMatrix = mSkyBoxNode->mCamera.getProjectMatrix();
 			mNVPMatrices.mNormalMatrix = glm::transpose(glm::inverse(mSkyBoxNode->mModels[0]->getUniform().mModelMatrix));
 			mCameraParameters.CameraWorldPosition = mSkyBoxNode->mCamera.getCamPosition();
-			mSkyBoxNode->mModels[0]->setModelMatrix(glm::translate(glm::mat4(1.0f), glm::vec3(mSkyBoxNode->mCamera.getCamPosition()))); // Skybox should always be at the origin
+			mSkyBoxNode->mModels[0]->setModelMatrix(glm::translate(glm::mat4(1.0f), glm::vec3(mSkyBoxNode->mCamera.getCamPosition()))); // Keep skybox at camera position to remove parallax
 
 			mSkyBoxNode->mUniformManager->updateUniformBuffer(mNVPMatrices, mSkyBoxNode->mModels[0]->getUniform(), mCameraParameters, mCurrentFrame);
 

@@ -107,7 +107,13 @@ namespace FF::Wrapper {
 
 		VkDeviceMemory getMemory() const { return mImageMemory; }
 
-		//can be relocate to Tool class
+		/// @brief Transfer Image Layout from old layout to new layout and insert necessary pipeline barrier.
+		/// @param newLayout new layout to transfer to.
+		/// @param srcStageMask source stage that needs to be finished before layout transition (producer).
+		/// @param dstStageMask destination stage that needs to wait for the layout transition (consumer).
+		/// @param subresourceRange the subresource range of the image to transition.
+		/// @param commandPool command pool to allocate command buffer for the operation.
+		/// @param commandBuffer optional command buffer to record the operation, if nullptr, a temporary command buffer will be created and submitted internally.
 		void setImageLayout(
 			VkImageLayout newLayout,
 			VkPipelineStageFlags srcStageMask,
