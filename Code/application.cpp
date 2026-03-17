@@ -134,12 +134,14 @@ namespace FF {
 		mOffscreenSphereNode->mUniformManager->attachImage(brdfLUT);
 
 		//Helmet Images
-		Wrapper::Image::Ptr Albedo = Wrapper::Image::createFromFile(mDevice, mCommandPool,"assets/DamagedHelmet/Albedo.jpg",VK_FORMAT_R8G8B8A8_UNORM);
-		Wrapper::Image::Ptr Normal = Wrapper::Image::createFromFile(mDevice, mCommandPool, "assets/DamagedHelmet/Normal.jpg", VK_FORMAT_R8G8B8A8_UNORM);
+		Wrapper::Image::Ptr Albedo = Wrapper::Image::createFromFile(mDevice, mCommandPool,"assets/DamagedHelmet/Default_albedo.jpg",VK_FORMAT_R8G8B8A8_UNORM);
+		Wrapper::Image::Ptr Normal = Wrapper::Image::createFromFile(mDevice, mCommandPool, "assets/DamagedHelmet/Default_normal.jpg", VK_FORMAT_R8G8B8A8_UNORM);
 		Wrapper::Image::Ptr Metallic = Wrapper::Image::createFromFile(mDevice, mCommandPool, "assets/DamagedHelmet/Metallic.png", VK_FORMAT_R8G8B8A8_UNORM);
 		Wrapper::Image::Ptr Roughness = Wrapper::Image::createFromFile(mDevice, mCommandPool, "assets/DamagedHelmet/Roughness.png", VK_FORMAT_R8G8B8A8_UNORM);
-		Wrapper::Image::Ptr AO = Wrapper::Image::createFromFile(mDevice, mCommandPool, "assets/DamagedHelmet/AO.jpg", VK_FORMAT_R8G8B8A8_UNORM);
-		Wrapper::Image::Ptr Emissive = Wrapper::Image::createFromFile(mDevice, mCommandPool, "assets/DamagedHelmet/Emissive.jpg", VK_FORMAT_R8G8B8A8_UNORM);
+		Wrapper::Image::Ptr AO = Wrapper::Image::createFromFile(mDevice, mCommandPool, "assets/DamagedHelmet/Default_AO.jpg", VK_FORMAT_R8G8B8A8_UNORM);
+		Wrapper::Image::Ptr Emissive = Wrapper::Image::createFromFile(mDevice, mCommandPool, "assets/DamagedHelmet/Default_emissive.jpg", VK_FORMAT_R8G8B8A8_UNORM);
+		Wrapper::Image::Ptr Default_metalRoughness = Wrapper::Image::createFromFile(mDevice, mCommandPool, "assets/DamagedHelmet/Default_metalRoughness.jpg", VK_FORMAT_R8G8B8A8_UNORM);
+		
 
 		//Helmet Images
 		mOffscreenSphereNode->mUniformManager->attachMapImage(Albedo);
@@ -148,7 +150,7 @@ namespace FF {
 		mOffscreenSphereNode->mUniformManager->attachMapImage(AO);
 		mOffscreenSphereNode->mUniformManager->attachMapImage(Metallic);
 		mOffscreenSphereNode->mUniformManager->attachMapImage(Roughness);
-
+		mOffscreenSphereNode->mUniformManager->attachMapImage(Default_metalRoughness);
 	
 
 		mOffscreenSphereNode->mUniformManager->build();
@@ -540,7 +542,7 @@ namespace FF {
 		mSphereNode->mMaterial->attachImages(mOffscreenRenderTarget->getRenderTargetImages()); // Attach the offscreen render target images to the material
 		mSphereNode->mMaterial->init(mDevice, mCommandPool, mSwapChain->getImageCount());
 
-		mPipeline = createPipeline("shaders/testVs.spv", "shaders/testFs.spv");
+		mPipeline = createPipeline("shaders/pbr1Vert.spv", "shaders/pbr1Frag.spv");
 		mScreenQuadPipeline = createScreenQuadPipeline(mRenderPass);
 		mSkyBoxPipeline = OffscreenPipeline::create(mDevice);
 		mSkyBoxPipeline->build(
@@ -631,7 +633,7 @@ namespace FF {
 		subpass.addColorAttachmentReference(multiAttachmentRef);
 		subpass.setDepthStencilAttachmentReference(depthAttachmentRef);
 		subpass.setResolveAttachmentReference(finalAttachmentRef);
-		subpass.buildSubPassDescription();
+		/*subpass.buildSubPassDescription();*/
 
 		swapChainRenderPass->addSubpass(subpass);
 
@@ -713,7 +715,7 @@ namespace FF {
 		subpass.addColorAttachmentReference(multiAttachmentRef);
 		subpass.setDepthStencilAttachmentReference(depthAttachmentRef);
 		subpass.setResolveAttachmentReference(finalAttachmentRef);
-		subpass.buildSubPassDescription();
+		/*subpass.buildSubPassDescription();*/
 
 		mRenderPass->addSubpass(subpass);
 
@@ -994,6 +996,7 @@ namespace FF {
 		if (mSwapChain) {
 			mSwapChain.reset();
 		}
+		mCommandPool.reset();
 		mDevice.reset();
 		mSurface.reset();
 		mInstance.reset();

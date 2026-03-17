@@ -3,17 +3,7 @@
 namespace FF::Wrapper {
 
 	Image::Ptr Image::createDepthImage(const Device::Ptr& device, const int& width, const int& height) {
-		std::vector<VkFormat> depthFormats = {
-			VK_FORMAT_D32_SFLOAT,
-			VK_FORMAT_D32_SFLOAT_S8_UINT,
-			VK_FORMAT_D24_UNORM_S8_UINT
-		};
-
-		VkFormat depthFormat = findSupportedFormat(
-			device,
-			depthFormats,
-			VK_IMAGE_TILING_OPTIMAL,
-			VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
+		VkFormat depthFormat = findDepthFormat(device, VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
 
 		return create(
 			device,
@@ -181,23 +171,7 @@ namespace FF::Wrapper {
 
 	}
 
-	VkFormat Image::findSupportedFormat(
-		const Device::Ptr& device,
-		const std::vector<VkFormat>& candidates,
-		VkImageTiling tiling,
-		VkFormatFeatureFlags features) {
-		for (const auto& format : candidates) {
-			VkFormatProperties props;
-			vkGetPhysicalDeviceFormatProperties(device->getPhysicalDevice(), format, &props);
-			if (tiling == VK_IMAGE_TILING_LINEAR && (props.linearTilingFeatures & features) == features) {
-				return format;
-			}
-			else if (tiling == VK_IMAGE_TILING_OPTIMAL && (props.optimalTilingFeatures & features) == features) {
-				return format;
-			}
-		}
-		throw std::runtime_error("Error: failed to find supported format!");
-	}
+
 
 	bool Image::hasStencilComponent(VkFormat format) {
 		return mFormat == VK_FORMAT_D32_SFLOAT_S8_UINT || mFormat == VK_FORMAT_D24_UNORM_S8_UINT;

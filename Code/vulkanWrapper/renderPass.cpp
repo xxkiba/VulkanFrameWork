@@ -2,98 +2,88 @@
 
 namespace FF::Wrapper {
 
-	SubPass::SubPass() {
+    void SubPass::validate() const {
+        if (mColorAttachmentReferences.empty()) {
+            throw std::runtime_error("SubPass: color attachment references are empty");
+        }
 
-	}
+    }
 
-	SubPass::~SubPass() {
+    RenderPass::RenderPass(const Device::Ptr& device)
+        : mDevice(device) {
+    }
 
-	}
+    RenderPass::~RenderPass() {
+        if (mRenderPass != VK_NULL_HANDLE) {
+            vkDestroyRenderPass(mDevice->getDevice(), mRenderPass, nullptr);
+            mRenderPass = VK_NULL_HANDLE;
+        }
+        mAttachmentDescriptions.clear();
+        mSubPasses.clear();
+        mDependencies.clear();
+        mDevice.reset();
+    }
 
-	void SubPass::addInputAttachmentReference(const VkAttachmentReference& ref) {
-		mInputAttachmentReferences.push_back(ref);
-	}
+    void RenderPass::addAttachment(const VkAttachmentDescription& attachmentDescription) {
+        mAttachmentDescriptions.push_back(attachmentDescription);
+    }
 
-	void SubPass::addColorAttachmentReference(const VkAttachmentReference& ref) {
-		mColorAttachmentReferences.push_back(ref);
-	}
+    void RenderPass::addSubpass(const SubPass& subpass) {
+        
+        mSubPasses.push_back(subpass);
+    }
 
-	void SubPass::setDepthStencilAttachmentReference(const VkAttachmentReference& ref) {
-		mDepthStencilAttachmentReference = ref;
-	}
+    void RenderPass::addDependency(const VkSubpassDependency& dependency) {
+        mDependencies.push_back(dependency);
+    }
 
-	void SubPass::setResolveAttachmentReference(const VkAttachmentReference& ref) {
-		mResolveAttachmentReference = ref;
-	}
+    void RenderPass::buildRenderPass() {
+        if (mSubPasses.empty() || mAttachmentDescriptions.empty()) {
+            throw std::runtime_error("RenderPass: subpasses or attachments are empty");
+        }
 
+        
+        for (const auto& sp : mSubPasses) {
+            sp.validate();
+        }
 
-	void SubPass::buildSubPassDescription() {
-		if (mColorAttachmentReferences.empty()) {
-			throw std::runtime_error("Color attachment references are empty");
-		}
+        
+        std::vector<VkSubpassDescription> subpassDescs(mSubPasses.size());
 
-		mSubpassDescription.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+        for (size_t i = 0; i < mSubPasses.size(); ++i) {
+            const auto& sp = mSubPasses[i];
+            VkSubpassDescription& desc = subpassDescs[i];
+            desc = {}; 
 
-		mSubpassDescription.inputAttachmentCount = static_cast<uint32_t>(mInputAttachmentReferences.size());
-		mSubpassDescription.pInputAttachments = mInputAttachmentReferences.data();
+            desc.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
 
-		mSubpassDescription.colorAttachmentCount = static_cast<uint32_t>(mColorAttachmentReferences.size());
+            desc.inputAttachmentCount = static_cast<uint32_t>(sp.mInputAttachmentReferences.size());
+            desc.pInputAttachments = sp.mInputAttachmentReferences.empty() ? nullptr
+                : sp.mInputAttachmentReferences.data();
 
-		mSubpassDescription.pColorAttachments = mColorAttachmentReferences.data();
+            desc.colorAttachmentCount = static_cast<uint32_t>(sp.mColorAttachmentReferences.size());
+            desc.pColorAttachments = sp.mColorAttachmentReferences.data();
 
-		mSubpassDescription.pResolveAttachments = mResolveAttachmentReference.layout == VK_IMAGE_LAYOUT_UNDEFINED ? nullptr : &mResolveAttachmentReference;
+          
+            desc.pResolveAttachments = sp.mResolveAttachmentReference ? &(*sp.mResolveAttachmentReference) : nullptr;
+            desc.pDepthStencilAttachment = sp.mDepthStencilAttachmentReference ? &(*sp.mDepthStencilAttachmentReference) : nullptr;
+        }
 
-		mSubpassDescription.pDepthStencilAttachment = mDepthStencilAttachmentReference.layout == VK_IMAGE_LAYOUT_UNDEFINED ? nullptr:&mDepthStencilAttachmentReference;
-	}
+        VkRenderPassCreateInfo renderPassCreateInfo{};
+        renderPassCreateInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
 
+        renderPassCreateInfo.attachmentCount = static_cast<uint32_t>(mAttachmentDescriptions.size());
+        renderPassCreateInfo.pAttachments = mAttachmentDescriptions.data();
 
-	RenderPass::RenderPass(const Device::Ptr& device)
-		: mDevice(device) {
-	}
-	RenderPass::~RenderPass() {
-		if (mRenderPass != VK_NULL_HANDLE) {
-			vkDestroyRenderPass(mDevice->getDevice(), mRenderPass, nullptr);
-			mRenderPass = VK_NULL_HANDLE;
-		}
-		mAttachmentDescriptions.clear();
-		mSubPasses.clear();
-		mDependencies.clear();
-		mDevice.reset();
-	}
-	void RenderPass::addAttachment(const VkAttachmentDescription& attachmentDescription) {
-		mAttachmentDescriptions.push_back(attachmentDescription);
-	}
-	void RenderPass::addSubpass(const SubPass& subpass) {
-		mSubPasses.push_back(subpass);
-	}
-	void RenderPass::addDependency(const VkSubpassDependency& dependency) {
-		mDependencies.push_back(dependency);
-	}
-	void RenderPass::buildRenderPass() {
-		if (mSubPasses.empty() || mAttachmentDescriptions.empty() || mDependencies.empty()) {
-			throw std::runtime_error("Subpass, attachment descriptions or dependencies are empty");
-		}
+        renderPassCreateInfo.subpassCount = static_cast<uint32_t>(subpassDescs.size());
+        renderPassCreateInfo.pSubpasses = subpassDescs.data();
 
-		//unwrap
-		std::vector<VkSubpassDescription> subPasses{};
-		for (int i = 0; i < mSubPasses.size(); i++) {
-			subPasses.push_back(mSubPasses[i].getSubpassDescription());
-		}
+        renderPassCreateInfo.dependencyCount = static_cast<uint32_t>(mDependencies.size());
+        renderPassCreateInfo.pDependencies = mDependencies.empty() ? nullptr : mDependencies.data();
 
-		VkRenderPassCreateInfo renderPassCreateInfo{};
-		renderPassCreateInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+        if (vkCreateRenderPass(mDevice->getDevice(), &renderPassCreateInfo, nullptr, &mRenderPass) != VK_SUCCESS) {
+            throw std::runtime_error("Error: failed to create render pass!");
+        }
+    }
 
-		renderPassCreateInfo.attachmentCount = static_cast<uint32_t>(mAttachmentDescriptions.size());
-		renderPassCreateInfo.pAttachments = mAttachmentDescriptions.data();
-
-		renderPassCreateInfo.subpassCount = static_cast<uint32_t>(subPasses.size());
-		renderPassCreateInfo.pSubpasses = subPasses.data();
-
-		renderPassCreateInfo.dependencyCount = static_cast<uint32_t>(mDependencies.size());
-		renderPassCreateInfo.pDependencies = mDependencies.data();
-
-		if (vkCreateRenderPass(mDevice->getDevice(), &renderPassCreateInfo, nullptr, &mRenderPass) != VK_SUCCESS) {
-			throw std::runtime_error("Error: failed to create render pass!");
-		}
-	}
-}
+} // namespace FF::Wrapper

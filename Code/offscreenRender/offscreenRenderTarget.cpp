@@ -173,7 +173,7 @@ namespace FF {
         subpass.addColorAttachmentReference(multiAttachmentRef);
         subpass.setDepthStencilAttachmentReference(depthAttachmentRef);
         subpass.setResolveAttachmentReference(finalAttachmentRef);
-        subpass.buildSubPassDescription();
+        /*subpass.buildSubPassDescription();*/
 
         mRenderPass->addSubpass(subpass);
 

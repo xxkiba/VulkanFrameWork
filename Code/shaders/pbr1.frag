@@ -23,6 +23,7 @@ layout(binding=9)uniform sampler2D U_Emissive;
 layout(binding=10)uniform sampler2D U_AO;
 layout(binding=11)uniform sampler2D U_Metallic;
 layout(binding=12)uniform sampler2D U_Roughness;
+layout(binding=13)uniform sampler2D U_DefaultMetalRoughness;
 
 
 layout(set = 1, binding = 0) uniform sampler2D texSampler[3];
@@ -85,14 +86,14 @@ void main(){
     float NdotL = max(dot(N, L), 0.0);
     float NdotV = max(dot(N, V), 0.0);
     float NdotH = max(dot(N, H), 0.0);
-    float roughness=texture(U_Roughness,V_Texcoord.xy).r;//rgba,rgb,alpha
+    float roughness=texture(U_DefaultMetalRoughness,V_Texcoord.xy).g;//rgba,rgb,alpha
 
     vec3 F0 = vec3(0.04); // Fresnel reflectance at normal incidence for dielectrics
     vec3 albedo = GammaDecode(texture(U_Albedo,V_Texcoord.xy).rgb);//texture -> albedo.jpg baseColor.jpg
     vec3 FinalColor = vec3(0.0);
     float eps = 0.01;
 
-    float metallic = texture(U_Metallic,V_Texcoord.xy).r;
+    float metallic = texture(U_DefaultMetalRoughness,V_Texcoord.xy).b;
     F0 = mix(F0, albedo, metallic); // Adjust F0 based on metallic property, linear interpolation between F0 and albedo
 
 
